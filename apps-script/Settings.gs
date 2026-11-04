@@ -198,8 +198,7 @@ function weekdayIso_(iso) {
 
 /** A Date at local midnight, for writing to the sheet as a real date. */
 function isoToSheetDate_(iso) {
-  var p = iso.split('-').map(Number);
-  return new Date(p[0], p[1] - 1, p[2]);
+  return Utilities.parseDate(iso, TZ, 'yyyy-MM-dd');
 }
 
 var DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

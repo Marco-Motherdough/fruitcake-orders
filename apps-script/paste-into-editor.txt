@@ -1,0 +1,864 @@
+// Motherdough fruitcake orders: all script code in one file.
+// Source: github.com/Marco-Motherdough/fruitcake-orders (apps-script/). Paste over everything in Code.gs.
+
+// ===== Code.gs =====
+/**
+ * Motherdough Christmas fruitcake pre-order API (Apps Script web app).
+ *
+ *   GET  ?action=config  -> product, price, stores, collection times, cut-off state, availability
+ *   POST (text/plain JSON body) -> place an order
+ *
+ * The page must POST with Content-Type: text/plain so the browser does not send
+ * a CORS preflight (Apps Script web apps cannot answer one).
+ *
+ * See CLAUDE.md for the full spec.
+ */
+
+function doGet(e) {
+  try {
+    var action = (e && e.parameter && e.parameter.action) || '';
+    if (action === 'config') return json_(getConfig_());
+    return json_(fail_('Unknown action.'));
+  } catch (err) {
+    return json_(handleUnexpected_(err, 'doGet'));
+  }
+}
+
+function doPost(e) {
+  try {
+    var body = null;
+    try {
+      body = JSON.parse((e && e.postData && e.postData.contents) || '');
+    } catch (parseErr) {
+      body = null;
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      log_('WARN', 'Rejected order: request body was not a JSON object');
+      return json_(fail_('Sorry, something went wrong sending your order. Please try again.'));
+    }
+    return json_(placeOrder_(body));
+  } catch (err) {
+    return json_(handleUnexpected_(err, 'doPost'));
+  }
+}
+
+/** Builds the public config the page needs. No customer data in here. */
+function getConfig_() {
+  var s = readSettings_();
+  var today = todayIso_();
+  var availability = computeAvailability_(s, bookedByDate_(), capacityOverrides_(), today);
+  var bookable = availability.some(function (d) { return d.status === 'open' || d.status === 'few'; });
+  var open = today <= s.last_order_date && availability.length > 0;
+
+  return {
+    ok: true,
+    today: today,
+    ordering_open: open,
+    sold_out: open && !bookable,
+    season_year: Number(s.last_pickup_date.slice(0, 4)),
+    lead_days: s.lead_days,
+    last_order_date: s.last_order_date,
+    last_pickup_date: s.last_pickup_date,
+    few_left_threshold: s.few_left_threshold,
+    max_quantity: s.max_quantity,
+    product: { name: s.product_name, price: s.product_price },
+    slots: s.slots,
+    stores: s.stores,
+    shop_phone: s.shop_phone,
+    availability: open ? availability : []
+  };
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function fail_(message, extra) {
+  var out = { ok: false, error: message };
+  if (extra) Object.keys(extra).forEach(function (k) { out[k] = extra[k]; });
+  return out;
+}
+
+// ===== Settings.gs =====
+/**
+ * Reading and parsing the Settings tab. Every business value lives there so
+ * staff can change it without touching code.
+ */
+
+var TZ = 'Africa/Johannesburg';
+
+var SHEETS = {
+  ORDERS: 'Orders',
+  SETTINGS: 'Settings',
+  LOG: 'Log',
+  CAPACITY: 'Capacity'
+};
+
+var ORDER_COLUMNS = [
+  'order_number', 'created_at', 'status', 'pickup_date', 'pickup_slot', 'store',
+  'name', 'cell', 'email', 'product', 'quantity', 'notes', 'total', 'consent', 'source', 'email_customer_sent', 'email_baker_sent'
+];
+
+var WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+function ss_() {
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
+function sheet_(name) {
+  var sh = ss_().getSheetByName(name);
+  if (!sh) throw settingsError_('Missing sheet tab "' + name + '". Run setup().');
+  return sh;
+}
+
+function settingsError_(message) {
+  var err = new Error(message);
+  err.isSettingsError = true;
+  return err;
+}
+
+/** Raw key -> value map from the Settings tab (columns A and B, header in row 1). */
+function readSettingsRaw_() {
+  var sh = sheet_(SHEETS.SETTINGS);
+  var last = sh.getLastRow();
+  var raw = {};
+  if (last < 2) return raw;
+  sh.getRange(2, 1, last - 1, 2).getValues().forEach(function (row) {
+    var key = String(row[0]).trim();
+    if (key) raw[key] = row[1];
+  });
+  return raw;
+}
+
+/** Parsed, validated settings. Throws a settings error if something required is missing. */
+function readSettings_() {
+  return parseSettings_(readSettingsRaw_());
+}
+
+function parseSettings_(raw) {
+  var problems = [];
+
+  function text(key) {
+    var v = raw[key];
+    return v === undefined || v === null ? '' : String(v).trim();
+  }
+  function int(key, fallback, required) {
+    var t = text(key);
+    if (t === '') {
+      if (required) problems.push(key + ' is empty');
+      return fallback;
+    }
+    var n = Number(t);
+    if (!isFinite(n) || Math.floor(n) !== n || n < 0) {
+      problems.push(key + ' must be a whole number');
+      return fallback;
+    }
+    return n;
+  }
+  function date(key) {
+    var iso = toIso_(raw[key]);
+    if (!iso) problems.push(key + ' must be a date like 2026-12-10');
+    return iso;
+  }
+  function list(key) {
+    return text(key).split(/[,;\n]/).map(function (x) { return x.trim(); }).filter(String);
+  }
+  function jsonVal(key) {
+    var t = text(key);
+    if (!t) { problems.push(key + ' is empty'); return null; }
+    try { return JSON.parse(t); } catch (e) { problems.push(key + ' is not valid JSON'); return null; }
+  }
+
+  var s = {
+    lead_days: int('lead_days', 14, true),
+    last_order_date: date('last_order_date'),
+    last_pickup_date: date('last_pickup_date'),
+    daily_capacity: int('daily_capacity', 0, true),
+    few_left_threshold: int('few_left_threshold', 3, false),
+    max_quantity: int('max_quantity', 5, false),
+    closed_dates: [],
+    closed_weekdays: [],
+    slots: [],
+    stores: [],
+    product_name: text('product_name'),
+    product_price: null, // null = price not set yet; totals are hidden
+    shop_phone: text('shop_phone'),
+    baker_emails: list('baker_emails'),
+    alert_email: text('alert_email'),
+    emails_enabled: /^(yes|true|on|1)$/i.test(text('emails_enabled')),
+    from_name: text('from_name') || 'Motherdough',
+    reply_to: text('reply_to')
+  };
+
+  var priceText = text('product_price').replace(/^R\s*/i, '');
+  if (priceText !== '') {
+    var price = Number(priceText);
+    if (!isFinite(price) || price < 0) problems.push('product_price must be a number, e.g. 350');
+    else s.product_price = price;
+  }
+
+  // closed_dates may be a single date cell or a comma-separated list.
+  if (raw.closed_dates instanceof Date) {
+    s.closed_dates = [toIso_(raw.closed_dates)];
+  } else {
+    list('closed_dates').forEach(function (d) {
+      var iso = toIso_(d);
+      if (iso) s.closed_dates.push(iso);
+      else problems.push('closed_dates has an invalid date: ' + d);
+    });
+  }
+
+  list('closed_weekdays').forEach(function (w) {
+    var i = WEEKDAYS.indexOf(w.slice(0, 3).toLowerCase());
+    if (i === -1) problems.push('closed_weekdays has an unknown day: ' + w);
+    else s.closed_weekdays.push(i);
+  });
+
+  if (!s.product_name) problems.push('product_name is empty');
+  if (s.emails_enabled && !s.baker_emails.length) problems.push('baker_emails is empty (needed when emails_enabled is yes)');
+  if (s.max_quantity < 1) s.max_quantity = 1;
+
+  var slots = jsonVal('slots');
+  if (slots) {
+    if (!Array.isArray(slots) || !slots.length) problems.push('slots must be a non-empty JSON list');
+    else s.slots = slots.map(function (x) {
+      return { id: String(x.id), label: String(x.label), start: String(x.start), end: String(x.end) };
+    });
+  }
+
+  var stores = jsonVal('stores_json');
+  if (stores) {
+    if (!Array.isArray(stores) || !stores.length) problems.push('stores_json must be a non-empty JSON list');
+    else s.stores = stores.map(function (x) {
+      if (!x.id || !x.name) problems.push('stores_json entries need an id and a name');
+      return { id: String(x.id), name: String(x.name), address: String(x.address || '') };
+    });
+  }
+
+  if (problems.length) throw settingsError_('Settings problem: ' + problems.join('; '));
+  return s;
+}
+
+/** Increments order_counter. Call only while holding the script lock. */
+function nextOrderNumber_() {
+  var sh = sheet_(SHEETS.SETTINGS);
+  var values = sh.getRange(1, 1, sh.getLastRow(), 2).getValues();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]).trim() === 'order_counter') {
+      var n = (parseInt(values[i][1], 10) || 0) + 1;
+      sh.getRange(i + 1, 2).setValue(n);
+      return 'MD-' + ('000' + n).slice(-Math.max(4, String(n).length));
+    }
+  }
+  throw settingsError_('Settings row "order_counter" is missing');
+}
+
+/* ---------- Dates (all as yyyy-MM-dd strings in Johannesburg time) ---------- */
+
+function todayIso_() {
+  return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+}
+
+function toIso_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
+  var t = String(v === undefined || v === null ? '' : v).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return '';
+  var p = t.split('-').map(Number);
+  var d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  return d.getUTCMonth() === p[1] - 1 && d.getUTCDate() === p[2] ? t : '';
+}
+
+function addDaysIso_(iso, n) {
+  var p = iso.split('-').map(Number);
+  return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10);
+}
+
+function weekdayIso_(iso) {
+  var p = iso.split('-').map(Number);
+  return new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay();
+}
+
+/** A Date at local midnight, for writing to the sheet as a real date. */
+function isoToSheetDate_(iso) {
+  return Utilities.parseDate(iso, TZ, 'yyyy-MM-dd');
+}
+
+var DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var DAY_NAMES_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+var MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+var MONTH_NAMES_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+  'August', 'September', 'October', 'November', 'December'];
+
+/** "Sat 19 Dec" */
+function shortDate_(iso) {
+  var p = iso.split('-').map(Number);
+  return DAY_NAMES[weekdayIso_(iso)] + ' ' + p[2] + ' ' + MONTH_NAMES[p[1] - 1];
+}
+
+/** "Saturday 19 December 2026" */
+function longDate_(iso) {
+  var p = iso.split('-').map(Number);
+  return DAY_NAMES_LONG[weekdayIso_(iso)] + ' ' + p[2] + ' ' + MONTH_NAMES_LONG[p[1] - 1] + ' ' + p[0];
+}
+
+/** "R1 360" */
+function money_(n) {
+  var whole = Math.round(n);
+  return 'R' + String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+// ===== Availability.gs =====
+/**
+ * Per-date availability for the bookable window.
+ * Capacity is counted in cakes (sum of quantity), not orders.
+ */
+
+/** { 'yyyy-MM-dd': cakesBooked } from the Orders tab, ignoring cancelled orders. */
+function bookedByDate_() {
+  var sh = sheet_(SHEETS.ORDERS);
+  var last = sh.getLastRow();
+  var booked = {};
+  if (last < 2) return booked;
+
+  var data = sh.getRange(1, 1, last, sh.getLastColumn()).getValues();
+  var header = data[0].map(function (h) { return String(h).trim(); });
+  var iDate = header.indexOf('pickup_date');
+  var iQty = header.indexOf('quantity');
+  var iStatus = header.indexOf('status');
+  if (iDate === -1 || iQty === -1) throw settingsError_('Orders tab is missing pickup_date or quantity column');
+
+  for (var r = 1; r < data.length; r++) {
+    var status = iStatus === -1 ? '' : String(data[r][iStatus]).trim().toLowerCase();
+    if (status === 'cancelled') continue;
+    var iso = toIso_(data[r][iDate]);
+    var qty = Number(data[r][iQty]) || 0;
+    if (iso && qty > 0) booked[iso] = (booked[iso] || 0) + qty;
+  }
+  return booked;
+}
+
+/** Optional Capacity tab: date | max. Returns { 'yyyy-MM-dd': max }. */
+function capacityOverrides_() {
+  var sh = ss_().getSheetByName(SHEETS.CAPACITY);
+  var out = {};
+  if (!sh || sh.getLastRow() < 2) return out;
+  sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues().forEach(function (row) {
+    var iso = toIso_(row[0]);
+    var max = Number(row[1]);
+    if (iso && String(row[1]).trim() !== '' && isFinite(max) && max >= 0) out[iso] = Math.floor(max);
+  });
+  return out;
+}
+
+/**
+ * [{date, remaining, status: open|few|full|closed}] from today + lead_days
+ * through last_pickup_date.
+ */
+function computeAvailability_(s, booked, overrides, today) {
+  var out = [];
+  var start = addDaysIso_(today, s.lead_days);
+  for (var d = start; d <= s.last_pickup_date; d = addDaysIso_(d, 1)) {
+    var max = Object.prototype.hasOwnProperty.call(overrides, d) ? overrides[d] : s.daily_capacity;
+    var closed = max <= 0 ||
+      s.closed_dates.indexOf(d) !== -1 ||
+      s.closed_weekdays.indexOf(weekdayIso_(d)) !== -1;
+    var remaining = closed ? 0 : Math.max(0, max - (booked[d] || 0));
+    var status = closed ? 'closed'
+      : remaining <= 0 ? 'full'
+      : remaining <= s.few_left_threshold ? 'few'
+      : 'open';
+    out.push({ date: d, remaining: remaining, status: status });
+  }
+  return out;
+}
+
+// ===== Orders.gs =====
+/**
+ * Order placement: validate, lock, re-check capacity, append, email.
+ */
+
+var RATE_LIMIT_MAX = 3;          // orders per email ...
+var RATE_LIMIT_WINDOW_S = 600;   // ... per 10 minutes
+var LOCK_WAIT_MS = 10000;
+
+function placeOrder_(body) {
+  // 1. Honeypot.
+  if (body.website) {
+    log_('WARN', 'Rejected order: honeypot field filled');
+    return fail_('Sorry, we could not place this order. Please call the shop.', { code: 'rejected' });
+  }
+
+  var s = readSettings_();
+  var today = todayIso_();
+  if (today > s.last_order_date) {
+    log_('INFO', 'Rejected order: ordering closed (cut-off ' + s.last_order_date + ')');
+    return fail_(closedMessage_(s), { code: 'closed' });
+  }
+
+  // 2. Validate every field and work out the total from Settings prices.
+  var v = validateOrder_(body, s);
+  if (v.error) {
+    log_('INFO', 'Rejected order: ' + v.log);
+    return fail_(v.error, { code: 'invalid', field: v.field });
+  }
+  var o = v.order;
+
+  // Rate limit per email address.
+  if (!rateLimitOk_(o.email)) {
+    log_('WARN', 'Rejected order: rate limit hit');
+    return fail_('We have received several orders from this email address in the last few minutes. ' +
+      'Please wait a little before trying again, or call the shop.', { code: 'rate_limited' });
+  }
+
+  // 3. Lock, re-check capacity, number and append.
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(LOCK_WAIT_MS)) {
+    log_('WARN', 'Order not placed: could not get lock in time');
+    return fail_('We are very busy right now. Your order has not been placed yet, please try again.', { code: 'busy' });
+  }
+
+  var rowIndex;
+  try {
+    var availability = computeAvailability_(s, bookedByDate_(), capacityOverrides_(), today);
+    var day = null;
+    for (var i = 0; i < availability.length; i++) {
+      if (availability[i].date === o.pickup_date) { day = availability[i]; break; }
+    }
+    if (!day || day.status === 'closed') {
+      log_('INFO', 'Rejected order: pickup date ' + o.pickup_date + ' not available');
+      return fail_('Sorry, ' + shortDate_(o.pickup_date) + ' is not available for pickup. Please choose another date.',
+        { code: 'date_unavailable', availability: availability });
+    }
+    if (day.remaining < o.quantity) {
+      log_('INFO', 'Rejected order: ' + o.pickup_date + ' has ' + day.remaining + ' left, wanted ' + o.quantity);
+      var msg = day.remaining > 0
+        ? 'Sorry, there ' + (day.remaining === 1 ? 'is only 1 cake' : 'are only ' + day.remaining + ' cakes') +
+          ' left for ' + shortDate_(o.pickup_date) + '. Please choose another date or a smaller quantity.'
+        : 'Sorry, ' + shortDate_(o.pickup_date) + ' filled up while you were choosing. Please pick another date.';
+      return fail_(msg, { code: 'date_full', availability: availability });
+    }
+
+    o.order_number = nextOrderNumber_();
+    var sh = sheet_(SHEETS.ORDERS);
+    var header = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
+    var record = {
+      order_number: o.order_number,
+      created_at: new Date(),
+      status: 'confirmed',
+      pickup_date: isoToSheetDate_(o.pickup_date),
+      pickup_slot: o.slot.label + ' ' + o.slot.start + '–' + o.slot.end,
+      store: o.store.name,
+      name: cellText_(o.name),
+      cell: cellText_(o.cell),
+      email: cellText_(o.email),
+      product: s.product_name,
+      quantity: o.quantity,
+      notes: cellText_(o.notes),
+      total: o.total === null ? '' : o.total,
+      consent: 'yes',
+      source: cellText_(o.source),
+      email_customer_sent: '',
+      email_baker_sent: ''
+    };
+    sh.appendRow(header.map(function (h) { return record.hasOwnProperty(h) ? record[h] : ''; }));
+    rowIndex = sh.getLastRow();
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
+
+  // 5. Emails, outside the lock. A failure here must not lose the order.
+  var summary = orderSummary_(o);
+  if (s.emails_enabled) {
+    var emailCtx = { order: o, settings: s, summary: summary };
+    markEmail_(rowIndex, 'email_customer_sent', trySend_(sendCustomerEmail_, emailCtx, o.order_number, 'customer'));
+    markEmail_(rowIndex, 'email_baker_sent', trySend_(sendBakerEmail_, emailCtx, o.order_number, 'baker'));
+  } else {
+    markEmail_(rowIndex, 'email_customer_sent', 'off');
+    markEmail_(rowIndex, 'email_baker_sent', 'off');
+  }
+
+  // 6. Response for the done screen.
+  return {
+    ok: true,
+    order_number: o.order_number,
+    pickup_date: o.pickup_date,
+    slot: o.slot,
+    total: o.total,
+    summary: summary,
+    store: o.store,
+    email: o.email
+  };
+}
+
+/**
+ * Returns { order } or { error, field, log }.
+ * Never trusts prices or totals from the page.
+ */
+function validateOrder_(b, s) {
+  function str(v, max) { return typeof v === 'string' ? v.trim().replace(/\s+/g, ' ').slice(0, max) : ''; }
+  function bad(field, error, log) { return { error: error, field: field, log: log || error }; }
+  function find(list, id) {
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+
+  var store = find(s.stores, b.store);
+  if (!store) return bad('store', 'Please choose a store to collect from.', 'invalid store');
+
+  var quantity = Number(b.quantity);
+  if (!isFinite(quantity) || Math.floor(quantity) !== quantity || quantity < 1 || quantity > s.max_quantity) {
+    return bad('quantity', 'Please choose between 1 and ' + s.max_quantity + ' cakes.', 'invalid quantity');
+  }
+
+  var pickup = toIso_(b.pickup_date);
+  if (!pickup) return bad('pickup_date', 'Please choose a pickup date.', 'invalid pickup date');
+  var earliest = addDaysIso_(todayIso_(), s.lead_days);
+  if (pickup < earliest || pickup > s.last_pickup_date) {
+    return bad('pickup_date', 'Please choose a pickup date between ' + shortDate_(earliest) +
+      ' and ' + shortDate_(s.last_pickup_date) + '.', 'pickup date outside window: ' + pickup);
+  }
+  var slot = s.slots.length === 1 ? s.slots[0] : find(s.slots, b.slot);
+  if (!slot) return bad('slot', 'Please choose a collection time.', 'invalid slot');
+
+  var name = str(b.name, 100);
+  if (name.length < 2) return bad('name', 'Please enter your full name.', 'missing name');
+
+  var cell = normaliseCell_(b.cell);
+  if (!cell) return bad('cell', 'Please enter a South African cell number, like 082 123 4567.', 'invalid cell');
+
+  var email = str(b.email, 254).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    return bad('email', 'Please enter a valid email address.', 'invalid email');
+  }
+
+  var notes = typeof b.notes === 'string' ? b.notes.trim().slice(0, 500) : '';
+
+  if (b.consent !== true) {
+    return bad('consent', 'Please tick the box to agree to us using your details for this order.', 'no consent');
+  }
+
+  var source = str(b.src, 40).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+
+  var unit = s.product_price; // null while the price is not set
+  var total = unit === null ? null : unit * quantity;
+
+  return {
+    order: {
+      product: s.product_name, store: store,
+      quantity: quantity, unit_price: unit, total: total,
+      pickup_date: pickup, slot: slot,
+      name: name, cell: cell, email: email, notes: notes, source: source
+    }
+  };
+}
+
+/** Accepts 082 123 4567, 0821234567, +27 82 123 4567, 27821234567. Returns 0821234567 or ''. */
+function normaliseCell_(v) {
+  if (typeof v !== 'string') return '';
+  var t = v.replace(/[\s\-().]/g, '');
+  if (/^\+27/.test(t)) t = '0' + t.slice(3);
+  else if (/^27\d{9}$/.test(t)) t = '0' + t.slice(2);
+  return /^0[6-8]\d{8}$/.test(t) ? t : '';
+}
+
+/** Lines for the done screen and emails: [{label, value}] */
+function orderSummary_(o) {
+  var lines = [
+    { label: 'Cake', value: o.product },
+    { label: 'Quantity', value: String(o.quantity) }
+  ];
+  if (o.unit_price !== null && o.quantity > 1) lines.push({ label: 'Price per cake', value: money_(o.unit_price) });
+  if (o.notes) lines.push({ label: 'Note', value: o.notes });
+  return lines;
+}
+
+function closedMessage_(s) {
+  return 'Orders for Christmas ' + s.last_pickup_date.slice(0, 4) + ' are closed.';
+}
+
+/** Stops a value being read as a formula when written to the sheet. */
+function cellText_(v) {
+  var t = String(v === undefined || v === null ? '' : v);
+  return /^[=+\-@\t\r]/.test(t) ? "'" + t : t;
+}
+
+function rateLimitOk_(email) {
+  var cache = CacheService.getScriptCache();
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, email);
+  var key = 'rl:' + Utilities.base64EncodeWebSafe(digest).slice(0, 40);
+  var count = Number(cache.get(key)) || 0;
+  if (count >= RATE_LIMIT_MAX) return false;
+  cache.put(key, String(count + 1), RATE_LIMIT_WINDOW_S);
+  return true;
+}
+
+function trySend_(fn, ctx, orderNumber, who) {
+  try {
+    fn(ctx);
+    return 'sent ' + Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm');
+  } catch (err) {
+    log_('ERROR', 'Email to ' + who + ' failed for ' + orderNumber + ': ' + (err && err.message));
+    alert_('Email failed for ' + orderNumber,
+      'The order was saved but the ' + who + ' email failed:\n\n' + (err && err.message));
+    return 'FAILED';
+  }
+}
+
+function markEmail_(rowIndex, column, value) {
+  try {
+    var sh = sheet_(SHEETS.ORDERS);
+    var header = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
+    var col = header.indexOf(column) + 1;
+    if (col > 0) sh.getRange(rowIndex, col).setValue(value);
+  } catch (err) {
+    log_('ERROR', 'Could not record email status: ' + (err && err.message));
+  }
+}
+
+// ===== Log.gs =====
+/**
+ * Logging to the Log tab, and throttled alert emails for unexpected errors.
+ * Keep customer personal data out of log messages.
+ */
+
+var ALERT_THROTTLE_S = 900; // at most one alert email per 15 minutes
+
+function log_(level, message) {
+  try {
+    var sh = ss_().getSheetByName(SHEETS.LOG);
+    if (!sh) return;
+    sh.appendRow([new Date(), level, cellText_(String(message).slice(0, 2000))]);
+  } catch (err) {
+    console.error('log_ failed: ' + (err && err.message) + ' | ' + message);
+  }
+}
+
+function alert_(subject, body) {
+  try {
+    var cache = CacheService.getScriptCache();
+    if (cache.get('alert_throttle')) return;
+    cache.put('alert_throttle', '1', ALERT_THROTTLE_S);
+
+    var to = '';
+    try { to = String(readSettingsRaw_().alert_email || '').trim(); } catch (e) { to = ''; }
+    if (!to) to = Session.getEffectiveUser().getEmail();
+    if (!to) return;
+
+    GmailApp.sendEmail(to, '[Fruitcake orders] ' + subject,
+      body + '\n\nSee the Log tab in the orders sheet for details. ' +
+      'Further alerts are paused for ' + (ALERT_THROTTLE_S / 60) + ' minutes.');
+  } catch (err) {
+    console.error('alert_ failed: ' + (err && err.message));
+  }
+}
+
+/** Logs, alerts, and returns a friendly error. Never exposes stack traces. */
+function handleUnexpected_(err, where) {
+  var message = (err && err.message) || String(err);
+  var stack = (err && err.stack) || '';
+  log_('ERROR', where + ': ' + message + (stack ? ' | ' + stack : ''));
+  alert_(err && err.isSettingsError ? 'Settings problem' : 'Unexpected error in ' + where,
+    where + ': ' + message + '\n\n' + stack);
+  return fail_('Sorry, our order system is having a problem right now. Your order has not been placed.',
+    { code: 'server_error' });
+}
+
+// ===== Email.gs =====
+/**
+ * Customer confirmation and baker notification emails.
+ * HTML templates: email_customer.html, email_baker.html. Plain text is built here.
+ */
+
+function emailData_(ctx) {
+  var o = ctx.order, s = ctx.settings;
+  return {
+    order_number: o.order_number,
+    first_name: o.name.split(' ')[0],
+    name: o.name,
+    cell: o.cell,
+    email: o.email,
+    notes: o.notes,
+    pickup_long: longDate_(o.pickup_date),
+    pickup_short: shortDate_(o.pickup_date),
+    slot_label: o.slot.label,
+    slot_time: o.slot.start + '–' + o.slot.end,
+    store_name: o.store.name,
+    store_address: o.store.address,
+    shop_phone: s.shop_phone,
+    reply_to: s.reply_to,
+    lines: ctx.summary,
+    total: o.total === null ? '' : money_(o.total),
+    source: o.source
+  };
+}
+
+function renderTemplate_(file, data) {
+  var t = HtmlService.createTemplateFromFile(file);
+  t.d = data;
+  return t.evaluate().getContent();
+}
+
+function sendCustomerEmail_(ctx) {
+  var d = emailData_(ctx), s = ctx.settings;
+  var contact = s.reply_to || s.shop_phone
+    ? 'Questions? Reply to this email' + (s.shop_phone ? ' or call us on ' + s.shop_phone : '') + '.'
+    : '';
+  var text = [
+    'Hi ' + d.first_name + ',',
+    '',
+    'Thank you for your Motherdough Christmas fruitcake order.',
+    '',
+    'Order number: ' + d.order_number,
+    'Pickup: ' + d.pickup_long + ', ' + d.slot_label + ' ' + d.slot_time,
+    'Store: ' + d.store_name + (d.store_address ? ', ' + d.store_address : ''),
+    '',
+    'Your order:'
+  ].concat(d.lines.map(function (l) { return '  ' + l.label + ': ' + l.value; }))
+   .concat([
+    d.total ? '  Total: ' + d.total : '',
+    '',
+    'Show this email or your order number at the counter when you collect.',
+    contact,
+    '',
+    'Motherdough'
+  ]).join('\n');
+
+  var options = {
+    htmlBody: renderTemplate_('email_customer', d),
+    name: s.from_name
+  };
+  if (s.reply_to) options.replyTo = s.reply_to;
+  GmailApp.sendEmail(d.email, 'Your Motherdough fruitcake order ' + d.order_number, text, options);
+}
+
+function sendBakerEmail_(ctx) {
+  var d = emailData_(ctx), s = ctx.settings;
+  var text = [
+    'New fruitcake order ' + d.order_number,
+    '',
+    'Pickup: ' + d.pickup_long + ', ' + d.slot_label + ' ' + d.slot_time,
+    'Store: ' + d.store_name,
+    '',
+    'Customer: ' + d.name,
+    'Cell: ' + d.cell,
+    'Email: ' + d.email,
+    ''
+  ].concat(d.lines.map(function (l) { return l.label + ': ' + l.value; }))
+   .concat([
+    d.total ? 'Total: ' + d.total : '',
+    d.source ? 'Source: ' + d.source : ''
+  ]).join('\n');
+
+  GmailApp.sendEmail(s.baker_emails.join(','),
+    'New fruitcake order ' + d.order_number + ', ' + d.store_name + ' pickup ' + d.pickup_short, text, {
+      htmlBody: renderTemplate_('email_baker', d),
+      name: s.from_name,
+      replyTo: d.email
+    });
+}
+
+// ===== Setup.gs =====
+/**
+ * One-time setup. Open the bound script editor, select setup, and Run.
+ * Safe to run again: it creates missing tabs and rows but never overwrites
+ * values staff have already filled in.
+ */
+
+var SETTINGS_DEFAULTS = [
+  // key, placeholder value, note for staff. '' = TBD, must be filled before launch.
+  ['lead_days', 14, 'Earliest pickup = today + this many days (Johannesburg time).'],
+  ['last_order_date', '2026-12-10', 'TBD confirm. Last day orders are accepted (yyyy-mm-dd).'],
+  ['last_pickup_date', '2026-12-24', 'TBD confirm. Last pickup date (yyyy-mm-dd).'],
+  ['daily_capacity', '', 'TBD. Max cakes (not orders) per pickup date. Per-date overrides go in the Capacity tab.'],
+  ['few_left_threshold', 3, 'Show the "few left" dot when this many or fewer cakes remain.'],
+  ['max_quantity', 5, 'Max cakes per order.'],
+  ['closed_dates', '', 'TBD. Comma-separated yyyy-mm-dd dates with no pickups, e.g. 2026-12-16, 2026-12-20'],
+  ['closed_weekdays', '', 'TBD. Comma-separated weekdays with no pickups, e.g. Sun, Mon'],
+  ['slots', JSON.stringify([
+    { id: 'day', label: 'Any time', start: '08:00', end: '16:00' }
+  ]), 'Collection window (JSON). One entry = no time choice for the customer.'],
+  ['stores_json', JSON.stringify([
+    { id: 'FHK', name: 'FHK', address: '' },
+    { id: 'JHK', name: 'JHK', address: '' },
+    { id: 'STB', name: 'STB', address: '' }
+  ]), 'Collection stores (JSON). TBD: full store names and addresses.'],
+  ['product_name', 'Rich Dark Fruitcake 700g', 'The cake customers order.'],
+  ['product_price', '', 'TBD. Price per cake in rand, e.g. 350. Blank = no price shown.'],
+  ['shop_phone', '', 'TBD. Shown to customers if something goes wrong.'],
+  ['emails_enabled', 'no', 'yes = send customer and baker emails. Leave no until emails are set up.'],
+  ['baker_emails', '', 'TBD. Comma-separated addresses that get the new-order email.'],
+  ['alert_email', '', 'Gets error alerts. Blank = the script owner account.'],
+  ['from_name', 'Motherdough', 'Sender name on emails.'],
+  ['reply_to', '', 'Reply-to address on customer emails.'],
+  ['order_counter', 0, 'Last order number used. Do not edit during the season.']
+];
+
+function setup() {
+  var ss = ss_();
+  ss.setSpreadsheetTimeZone(TZ);
+
+  // Orders
+  var orders = ensureSheet_(ss, SHEETS.ORDERS, ORDER_COLUMNS);
+  orders.setFrozenRows(1);
+  var col = function (name) { return ORDER_COLUMNS.indexOf(name) + 1; };
+  var rows = Math.max(orders.getMaxRows() - 1, 1);
+  orders.getRange(2, col('created_at'), rows, 1).setNumberFormat('yyyy-mm-dd hh:mm');
+  orders.getRange(2, col('pickup_date'), rows, 1).setNumberFormat('ddd yyyy-mm-dd');
+  orders.getRange(2, col('total'), rows, 1).setNumberFormat('"R"#,##0');
+  orders.getRange(2, col('cell'), rows, 1).setNumberFormat('@');
+  orders.getRange(1, 1, 1, ORDER_COLUMNS.length).setFontWeight('bold');
+
+  // Settings
+  var settings = ensureSheet_(ss, SHEETS.SETTINGS, ['key', 'value', 'notes']);
+  settings.setFrozenRows(1);
+  settings.getRange('B:B').setNumberFormat('@'); // keep dates and JSON as plain text
+  var existing = {};
+  if (settings.getLastRow() > 1) {
+    settings.getRange(2, 1, settings.getLastRow() - 1, 1).getValues()
+      .forEach(function (r) { existing[String(r[0]).trim()] = true; });
+  }
+  SETTINGS_DEFAULTS.forEach(function (row) {
+    if (!existing[row[0]]) settings.appendRow([row[0], String(row[1]), row[2]]);
+  });
+  settings.getRange(1, 1, 1, 3).setFontWeight('bold');
+  settings.setColumnWidth(1, 170);
+  settings.setColumnWidth(2, 320);
+
+  // Capacity overrides (optional)
+  var cap = ensureSheet_(ss, SHEETS.CAPACITY, ['date', 'max']);
+  cap.setFrozenRows(1);
+  cap.getRange('A:A').setNumberFormat('yyyy-mm-dd');
+
+  // Log
+  var log = ensureSheet_(ss, SHEETS.LOG, ['timestamp', 'level', 'message']);
+  log.setFrozenRows(1);
+  log.getRange('A:A').setNumberFormat('yyyy-mm-dd hh:mm:ss');
+
+  log_('INFO', 'setup() ran');
+  checkSettings();
+}
+
+function ensureSheet_(ss, name, header) {
+  var sh = ss.getSheetByName(name) || ss.insertSheet(name);
+  if (sh.getLastRow() === 0) sh.appendRow(header);
+  return sh;
+}
+
+/** Run from the editor to see whether Settings are complete. */
+function checkSettings() {
+  try {
+    readSettings_();
+    console.log('Settings look complete.');
+    return 'Settings look complete.';
+  } catch (err) {
+    console.log(err.message);
+    return err.message;
+  }
+}
+
+/** Run from the editor to preview the config the page will receive. */
+function previewConfig() {
+  console.log(JSON.stringify(getConfig_(), null, 2));
+}
