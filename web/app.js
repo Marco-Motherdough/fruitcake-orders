@@ -70,7 +70,54 @@
 
   function phone() { return (state.config && state.config.shop_phone) || CONFIG.SHOP_PHONE; }
 
+  /* ---------- Preview mode (until the Apps Script URL is set) ---------- */
+
+  var DEMO = CONFIG.API_URL.indexOf('REPLACE_WITH') !== -1;
+
+  function demoIso(d) {
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  function demoConfig() {
+    var now = new Date();
+    var year = now.getMonth() === 11 && now.getDate() > 24 ? now.getFullYear() + 1 : now.getFullYear();
+    var last = year + '-12-24';
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 14);
+    var availability = [];
+    for (var d = new Date(start), i = 0; demoIso(d) <= last; d.setDate(d.getDate() + 1), i++) {
+      var status = 'open', remaining = 20;
+      if (i === 3) { status = 'few'; remaining = 2; }
+      if (i === 5) { status = 'full'; remaining = 0; }
+      availability.push({ date: demoIso(d), remaining: remaining, status: status });
+    }
+    return {
+      ok: true, demo: true, today: demoIso(now), ordering_open: availability.length > 0, sold_out: false,
+      season_year: year, lead_days: 14, last_order_date: year + '-12-10', last_pickup_date: last,
+      few_left_threshold: 3, max_quantity: 5,
+      product: { name: 'Rich Dark Fruitcake 700g', price: null },
+      slots: [{ id: 'day', label: 'Any time', start: '08:00', end: '16:00' }],
+      stores: [{ id: 'FHK', name: 'FHK', address: '' }, { id: 'JHK', name: 'JHK', address: '' }, { id: 'STB', name: 'STB', address: '' }],
+      shop_phone: '', availability: availability
+    };
+  }
+
+  function demoRequest(method, body) {
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        if (method === 'GET') return resolve(demoConfig());
+        var store = find(state.config.stores, body.store);
+        resolve({
+          ok: true, order_number: 'MD-DEMO', pickup_date: body.pickup_date, slot: state.config.slots[0],
+          total: null, email: body.email, store: store,
+          summary: [{ label: 'Cake', value: state.config.product.name }, { label: 'Quantity', value: String(body.quantity) }]
+            .concat(body.notes ? [{ label: 'Note', value: body.notes }] : [])
+        });
+      }, method === 'GET' ? 300 : 1200);
+    });
+  }
+
   function request(method, body) {
+    if (DEMO) return demoRequest(method, body);
     var url = CONFIG.API_URL + (method === 'GET' ? '?action=config&_=' + Date.now() : '');
     var controller = 'AbortController' in window ? new AbortController() : null;
     var timer = controller ? setTimeout(function () { controller.abort(); }, CONFIG.REQUEST_TIMEOUT_MS) : null;
@@ -618,5 +665,6 @@
   }
 
   bind();
+  $('demo-banner').hidden = !DEMO;
   loadConfig();
 })();

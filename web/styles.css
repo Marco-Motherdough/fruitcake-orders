@@ -63,6 +63,18 @@ main:focus { box-shadow: none; }
 }
 .skip-link:focus { top: 8px; }
 
+/* ---------- Preview banner ---------- */
+
+.demo-banner {
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--text);
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
 /* ---------- Masthead ---------- */
 
 .masthead {
