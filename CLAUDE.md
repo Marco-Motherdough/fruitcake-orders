@@ -103,7 +103,7 @@ All values live in the `Settings` sheet so staff can change them without code. V
 - Freeze the header row; format date and money columns.
 
 ### `Settings` tab (key | value)
-`lead_days, last_order_date, last_pickup_date, daily_capacity, few_left_threshold, max_quantity, closed_dates, closed_weekdays, slots, stores_json, product_name, product_price, shop_phone, baker_emails, alert_email, from_name, reply_to, order_counter`
+`emails_enabled, lead_days, last_order_date, last_pickup_date, daily_capacity, few_left_threshold, max_quantity, closed_dates, closed_weekdays, slots, stores_json, product_name, product_price, shop_phone, baker_emails, alert_email, from_name, reply_to, order_counter`
 
 The page reads product, price, stores and slots from the API, so the page and the script share one source of truth.
 

@@ -17,7 +17,7 @@ Fill these in before launch. Most go in the **Settings** tab of the sheet, so th
 | What | Where |
 |---|---|
 | Daily capacity (cakes per pickup date, all stores together) | Settings `daily_capacity` (**required**) |
-| Baker email addresses | Settings `baker_emails` (**required**) |
+| Baker email addresses | Settings `baker_emails` (required once `emails_enabled` is `yes`) |
 | Price of the 700g cake | Settings `product_price`. While it's blank, no price is shown |
 | Full store names and addresses for FHK, JHK and STB | Settings `stores_json` |
 | Is capacity shared by all stores, or set per store? | Currently shared. Tell the developer if it should be per store |

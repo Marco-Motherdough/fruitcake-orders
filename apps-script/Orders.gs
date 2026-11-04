@@ -94,9 +94,14 @@ function placeOrder_(body) {
 
   // 5. Emails, outside the lock. A failure here must not lose the order.
   var summary = orderSummary_(o);
-  var emailCtx = { order: o, settings: s, summary: summary };
-  markEmail_(rowIndex, 'email_customer_sent', trySend_(sendCustomerEmail_, emailCtx, o.order_number, 'customer'));
-  markEmail_(rowIndex, 'email_baker_sent', trySend_(sendBakerEmail_, emailCtx, o.order_number, 'baker'));
+  if (s.emails_enabled) {
+    var emailCtx = { order: o, settings: s, summary: summary };
+    markEmail_(rowIndex, 'email_customer_sent', trySend_(sendCustomerEmail_, emailCtx, o.order_number, 'customer'));
+    markEmail_(rowIndex, 'email_baker_sent', trySend_(sendBakerEmail_, emailCtx, o.order_number, 'baker'));
+  } else {
+    markEmail_(rowIndex, 'email_customer_sent', 'off');
+    markEmail_(rowIndex, 'email_baker_sent', 'off');
+  }
 
   // 6. Response for the done screen.
   return {

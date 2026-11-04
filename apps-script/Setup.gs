@@ -25,6 +25,7 @@ var SETTINGS_DEFAULTS = [
   ['product_name', 'Rich Dark Fruitcake 700g', 'The cake customers order.'],
   ['product_price', '', 'TBD. Price per cake in rand, e.g. 350. Blank = no price shown.'],
   ['shop_phone', '', 'TBD. Shown to customers if something goes wrong.'],
+  ['emails_enabled', 'no', 'yes = send customer and baker emails. Leave no until emails are set up.'],
   ['baker_emails', '', 'TBD. Comma-separated addresses that get the new-order email.'],
   ['alert_email', '', 'Gets error alerts. Blank = the script owner account.'],
   ['from_name', 'Motherdough', 'Sender name on emails.'],
