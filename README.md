@@ -110,3 +110,12 @@ Only after the live page is tested, generate QR codes for `https://order.motherd
   - `Setup.gs`: one-time setup.
 
   The total is always worked out by the script from Settings prices. Capacity is re-checked inside `LockService` before the row is appended, so two people can't both get the last slot. If an email fails, the order is still saved: the `email_*_sent` column shows `FAILED` and an alert is sent.
+
+## Baker app
+
+Staff-only page for moving orders through their stages. It runs from the same script, on its own deployment with access "Anyone within Motherdough".
+
+- Link: https://script.google.com/a/macros/motherdough.co.za/s/AKfycbyJo64Vfubxaq1_PavcWIxNPLgf5NYPVOAAcakYTlyGpYgOKpERst5l7-yfaTttIoBSlw/exec
+- Who can open it: emails in Settings `staff_emails`.
+- Stages: Settings `baker_stages`.
+- After a code change, update **both** deployments (customer API and Baker app) to a new version.
