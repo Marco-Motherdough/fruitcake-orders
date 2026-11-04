@@ -127,6 +127,7 @@
       opts.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
       opts.body = JSON.stringify(body);
     }
+    lastCall = Date.now();
     return fetch(url, opts).then(function (res) {
       if (timer) clearTimeout(timer);
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -135,6 +136,21 @@
       if (timer) clearTimeout(timer);
       throw err;
     });
+  }
+
+  /* ---------- Warm-up ---------- */
+
+  // Google's script goes to sleep after a short idle time and takes a few seconds
+  // to wake. Wake it while the customer fills in step 3, so PLACE ORDER is quick.
+  var lastCall = 0;
+  function warmUp() {
+    if (DEMO || state.submitting || Date.now() - lastCall < 45000) return;
+    lastCall = Date.now();
+    request('GET').then(function (cfg) {
+      if (cfg && cfg.ok && cfg.ordering_open && !state.submitting && !state.result) {
+        state.config.availability = cfg.availability; // fresher dates, checked again on submit
+      }
+    }).catch(function () { /* ignore: the order itself will report any problem */ });
   }
 
   /* ---------- Loading config ---------- */
@@ -581,7 +597,7 @@
     state.step = n;
 
     if (n === 2) renderCalendar();
-    if (n === 3) renderSummary();
+    if (n === 3) { renderSummary(); warmUp(); }
     if (n !== 2) $('date-message').hidden = true;
 
     renderStepNav();
@@ -644,6 +660,7 @@
     });
 
     ['f-name', 'f-cell', 'f-email'].forEach(function (id) {
+      $(id).addEventListener('focus', warmUp);
       $(id).addEventListener('input', function () {
         $(id).removeAttribute('aria-invalid');
         $('e-' + id.slice(2)).hidden = true;
