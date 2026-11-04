@@ -69,7 +69,7 @@ function placeOrder_(body) {
     var record = {
       order_number: o.order_number,
       created_at: new Date(),
-      status: 'confirmed',
+      status: s.first_stage,
       pickup_date: isoToSheetDate_(o.pickup_date),
       pickup_slot: o.slot.label + ' ' + o.slot.start + '–' + o.slot.end,
       store: o.store.name,

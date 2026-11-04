@@ -19,6 +19,7 @@ function doGet(e) {
   try {
     var action = (e && e.parameter && e.parameter.action) || '';
     if (action === 'config') return json_(getConfig_());
+    if (!action) return serveBakerApp_(); // staff-only baker page (checks the signed-in user)
     return json_(fail_('Unknown action.'));
   } catch (err) {
     return json_(handleUnexpected_(err, 'doGet'));

@@ -183,7 +183,7 @@ Gmail limits: about 1,500 recipients a day on Google Workspace, about 100 on fre
 
 - **Payments:** Yoco Checkout API (Motherdough already uses Yoco in store) or Shopify checkout. Would add `pending_payment` status, a checkout redirect, and a verified payment webhook before emails send. Note: Apps Script cannot read webhook signature headers, so payment confirmation may need a small serverless function or to be handled through Shopify. Decide before building.
 - Day-before reminder emails.
-- Staff view or filters for the daily bake list.
+- Baker app (built): staff-only page served by the same script (`Baker.gs`, `baker.html`) on a second deployment with access "Anyone within Motherdough". Only `staff_emails` get in. Stages come from `baker_stages`; the `status` column holds the stage and `status_updated` records who changed it and when.
 
 ## Notes for changes
 

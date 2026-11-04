@@ -31,6 +31,8 @@ var SETTINGS_DEFAULTS = [
   ['alert_email', '', 'Gets error alerts. Blank = the script owner account.'],
   ['from_name', 'Motherdough', 'Sender name on emails.'],
   ['reply_to', '', 'Reply-to address on customer emails.'],
+  ['staff_emails', '', 'Google accounts allowed into the baker app, comma-separated.'],
+  ['baker_stages', 'New, Baked, Decorated, Packed, Ready for collection, Collected', 'Stages in the baker app, in order. The first is for new orders, the last means done.'],
   ['order_counter', 0, 'Last order number used. Do not edit during the season.']
 ];
 

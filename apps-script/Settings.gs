@@ -14,7 +14,7 @@ var SHEETS = {
 
 var ORDER_COLUMNS = [
   'order_number', 'created_at', 'status', 'pickup_date', 'pickup_slot', 'store',
-  'name', 'cell', 'email', 'product', 'quantity', 'notes', 'total', 'consent', 'source', 'email_customer_sent', 'email_baker_sent'
+  'name', 'cell', 'email', 'product', 'quantity', 'notes', 'total', 'consent', 'source', 'email_customer_sent', 'email_baker_sent', 'status_updated'
 ];
 
 var WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -106,7 +106,8 @@ function parseSettings_(raw) {
     emails_enabled: /^(yes|true|on|1)$/i.test(text('emails_enabled')),
     no_reply: !/^(no|false|off|0)$/i.test(text('no_reply')), // default yes
     from_name: text('from_name') || 'Motherdough',
-    reply_to: text('reply_to')
+    reply_to: text('reply_to'),
+    first_stage: text('baker_stages').split(',')[0].trim() || 'New'
   };
 
   var priceText = text('product_price').replace(/^R\s*/i, '');

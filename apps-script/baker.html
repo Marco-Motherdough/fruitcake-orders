@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFFFFF; --text: #4C3329; --caramel: #AE8344; --caramel-dark: #8A6331;
+    --muted: #7A655A; --rule: #EFE7DC; --control: #9E8A78; --disabled: #A8978B;
+    --tint: #FBF7F1; --error: #A2331F;
+    --focus: 0 0 0 2px #fff, 0 0 0 4px #4C3329;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 15px; line-height: 1.5; letter-spacing: 0.3px;
+  }
+  [hidden] { display: none !important; }
+  :focus { outline: none; }
+  :focus-visible { box-shadow: var(--focus); }
+  .page { max-width: 720px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 14px; }
+  .brand { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .logo { font-family: 'Josefin Sans', Arial, sans-serif; font-weight: 600; font-size: 20px; letter-spacing: 4px; color: var(--caramel); }
+  .kicker { font-size: 11px; letter-spacing: 2px; color: var(--caramel-dark); font-weight: 500; }
+  .who { font-size: 12px; color: var(--muted); }
+
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+  select, .btn {
+    font: inherit; font-size: 13px; color: var(--text); background: var(--bg);
+    border: 1px solid var(--control); border-radius: 2px; min-height: 44px; padding: 8px 12px;
+  }
+  .btn { cursor: pointer; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; font-weight: 500; }
+  .btn-primary { background: var(--text); border-color: var(--text); color: #fff; }
+  .btn[disabled] { opacity: .6; cursor: progress; }
+  .spacer { flex: 1; }
+  .updated { font-size: 12px; color: var(--muted); }
+
+  .summary { padding: 14px 0 4px; font-size: 14px; color: var(--muted); }
+  .summary strong { color: var(--text); }
+
+  .day { padding-top: 22px; }
+  .day h2 {
+    font-size: 22px; font-weight: 400; color: var(--caramel); margin: 0;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+    border-bottom: 1px solid var(--rule); padding-bottom: 8px;
+  }
+  .day h2 small { font-size: 13px; color: var(--muted); }
+  .past h2 { color: var(--muted); }
+
+  .order { padding: 14px 0 14px 14px; border-bottom: 1px solid var(--rule); border-left: 3px solid transparent; }
+  .order.is-new { border-left-color: var(--caramel); background: var(--tint); }
+  .order.is-done { opacity: .6; }
+  .row1 { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .what { font-weight: 600; font-size: 16px; }
+  .num { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
+  .stage { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--caramel-dark); font-weight: 600; }
+  .is-new .stage { color: var(--caramel); }
+  .row2 { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .row2 a { color: var(--text); }
+  .note { margin: 8px 0 0; padding: 6px 10px; border-left: 2px solid var(--caramel); font-size: 14px; }
+  .note b { font-size: 11px; letter-spacing: 2px; color: var(--caramel-dark); font-weight: 600; margin-right: 6px; }
+  .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .actions .btn-primary { flex: 1 1 200px; }
+  .actions select { flex: 0 1 200px; }
+  .stamp { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  .msg { padding: 40px 0; text-align: center; color: var(--muted); }
+  .msg h1 { font-size: 26px; font-weight: 400; color: var(--caramel); }
+  .error { color: var(--error); padding: 10px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brand">
+      <span class="logo">MOTHERDOUGH</span>
+      <span class="who"><?= email ?></span>
+    </div>
+    <div class="kicker">CHRISTMAS FRUITCAKE · BAKER</div>
+  </header>
+
+<? if (!allowed) { ?>
+  <div class="msg">
+    <h1>Staff only</h1>
+    <p>This page is for Motherdough staff.<? if (email) { ?> You’re signed in as <?= email ?>, which isn’t on the staff list.<? } ?></p>
+    <p>Ask Marco to add your email to <b>staff_emails</b> in the Settings tab.</p>
+  </div>
+<? } else { ?>
+  <div class="toolbar">
+    <select id="store" aria-label="Store"><option value="">All stores</option></select>
+    <select id="view" aria-label="Show">
+      <option value="todo">To do</option>
+      <option value="all">All orders</option>
+    </select>
+    <span class="spacer"></span>
+    <span class="updated" id="updated" aria-live="polite"></span>
+    <button class="btn" id="refresh" type="button">Refresh</button>
+  </div>
+  <p class="error" id="error" role="alert" hidden></p>
+  <p class="summary" id="summary"></p>
+  <div id="list"><p class="msg">Loading orders…</p></div>
+
+<script>
+(function () {
+  'use strict';
+  var data = null;
+  var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function dayLabel(iso, today) {
+    if (!iso) return 'No date';
+    var p = iso.split('-').map(Number);
+    var d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+    var label = DAYS[d.getUTCDay()] + ' ' + p[2] + ' ' + MONTHS[p[1] - 1];
+    var t = today.split('-').map(Number);
+    var diff = Math.round((d - Date.UTC(t[0], t[1] - 1, t[2])) / 864e5);
+    if (diff === 0) return 'Today · ' + label;
+    if (diff === 1) return 'Tomorrow · ' + label;
+    return label;
+  }
+  function isDone(o) { return o.status === data.stages[data.stages.length - 1] || o.status === data.cancelled; }
+
+  function load() {
+    $('refresh').disabled = true;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        $('refresh').disabled = false;
+        if (!res || !res.ok) return showError((res && res.error) || 'Could not load orders.');
+        $('error').hidden = true;
+        data = res;
+        fillStores();
+        render();
+        var now = new Date();
+        $('updated').textContent = 'Updated ' + now.toTimeString().slice(0, 5);
+      })
+      .withFailureHandler(function () {
+        $('refresh').disabled = false;
+        showError('Could not load orders. Check your connection and tap Refresh.');
+      })
+      .bakerGetOrders();
+  }
+
+  function showError(msg) { $('error').textContent = msg; $('error').hidden = false; }
+
+  function fillStores() {
+    var sel = $('store'), current = sel.value;
+    var stores = [];
+    data.orders.forEach(function (o) { if (o.store && stores.indexOf(o.store) === -1) stores.push(o.store); });
+    stores.sort();
+    sel.length = 1;
+    stores.forEach(function (s) { var opt = el('option', null, s); opt.value = s; sel.appendChild(opt); });
+    sel.value = stores.indexOf(current) !== -1 ? current : '';
+  }
+
+  function render() {
+    var store = $('store').value, view = $('view').value;
+    var list = data.orders.filter(function (o) {
+      if (store && o.store !== store) return false;
+      if (view === 'todo') return !isDone(o) && !o.past;
+      return true;
+    });
+    list.sort(function (a, b) {
+      return (a.pickup_date || '').localeCompare(b.pickup_date || '') || a.order_number.localeCompare(b.order_number);
+    });
+
+    var cakes = 0, fresh = 0;
+    list.forEach(function (o) {
+      if (o.status !== data.cancelled) cakes += o.quantity;
+      if (o.status === data.stages[0]) fresh++;
+    });
+    $('summary').innerHTML = '';
+    var s1 = el('strong', null, cakes + (cakes === 1 ? ' cake' : ' cakes'));
+    $('summary').appendChild(s1);
+    $('summary').appendChild(document.createTextNode(' in ' + list.length + (list.length === 1 ? ' order' : ' orders')));
+    if (fresh) {
+      $('summary').appendChild(document.createTextNode(' · '));
+      $('summary').appendChild(el('strong', null, fresh + ' new'));
+    }
+
+    var box = $('list');
+    box.textContent = '';
+    if (!list.length) { box.appendChild(el('p', 'msg', view === 'todo' ? 'Nothing to do. All caught up.' : 'No orders yet.')); return; }
+
+    var groups = {};
+    list.forEach(function (o) { (groups[o.pickup_date] = groups[o.pickup_date] || []).push(o); });
+    Object.keys(groups).sort().forEach(function (date) {
+      var orders = groups[date];
+      var sec = el('section', 'day' + (date < data.today ? ' past' : ''));
+      var h = el('h2', null, dayLabel(date, data.today));
+      var n = orders.reduce(function (sum, o) { return sum + (o.status === data.cancelled ? 0 : o.quantity); }, 0);
+      h.appendChild(el('small', null, n + (n === 1 ? ' cake' : ' cakes')));
+      sec.appendChild(h);
+      orders.forEach(function (o) { sec.appendChild(renderOrder(o)); });
+      box.appendChild(sec);
+    });
+  }
+
+  function renderOrder(o) {
+    var stages = data.stages;
+    var idx = stages.indexOf(o.status);
+    var wrap = el('article', 'order' + (idx === 0 ? ' is-new' : '') + (isDone(o) ? ' is-done' : ''));
+
+    var r1 = el('div', 'row1');
+    var what = el('span', 'what', o.quantity + ' × ' + o.product);
+    r1.appendChild(what);
+    r1.appendChild(el('span', 'stage', o.status));
+    wrap.appendChild(r1);
+
+    var r2 = el('div', 'row2');
+    r2.appendChild(document.createTextNode(o.order_number + ' · ' + o.name + ' · '));
+    var tel = el('a', null, o.cell); tel.href = 'tel:' + o.cell;
+    r2.appendChild(tel);
+    r2.appendChild(document.createTextNode(' · ' + o.store));
+    wrap.appendChild(r2);
+
+    if (o.notes) {
+      var note = el('p', 'note');
+      note.appendChild(el('b', null, 'NOTE'));
+      note.appendChild(document.createTextNode(o.notes));
+      wrap.appendChild(note);
+    }
+
+    var actions = el('div', 'actions');
+    if (idx !== -1 && idx < stages.length - 1) {
+      var next = stages[idx + 1];
+      var b = el('button', 'btn btn-primary', 'Mark ' + next);
+      b.type = 'button';
+      b.addEventListener('click', function () { setStatus(o, next, b); });
+      actions.appendChild(b);
+    }
+    var sel = el('select');
+    sel.setAttribute('aria-label', 'Change stage for ' + o.order_number);
+    stages.concat([data.cancelled]).forEach(function (s) {
+      var opt = el('option', null, s); opt.value = s; if (s === o.status) opt.selected = true; sel.appendChild(opt);
+    });
+    sel.addEventListener('change', function () {
+      if (sel.value === data.cancelled && !confirm('Cancel order ' + o.order_number + '? Its cake slot becomes free again.')) {
+        sel.value = o.status; return;
+      }
+      setStatus(o, sel.value, sel);
+    });
+    actions.appendChild(sel);
+    wrap.appendChild(actions);
+
+    if (o.status_updated) wrap.appendChild(el('div', 'stamp', 'Last change: ' + o.status_updated));
+    return wrap;
+  }
+
+  function setStatus(o, status, control) {
+    control.disabled = true;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) { control.disabled = false; return showError((res && res.error) || 'Could not save.'); }
+        o.status = res.status;
+        o.status_updated = res.status_updated;
+        render();
+      })
+      .withFailureHandler(function () {
+        control.disabled = false;
+        showError('Could not save. Check your connection and try again.');
+      })
+      .bakerSetStatus(o.order_number, status);
+  }
+
+  $('store').addEventListener('change', render);
+  $('view').addEventListener('change', render);
+  $('refresh').addEventListener('click', load);
+  // New orders show up on their own every minute.
+  setInterval(function () { if (!document.hidden) load(); }, 60000);
+  load();
+})();
+</script>
+<? } ?>
+</div>
+</body>
+</html>
