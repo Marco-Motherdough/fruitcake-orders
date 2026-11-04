@@ -62,7 +62,7 @@ function sendCustomerEmail_(ctx) {
     name: s.from_name
   };
   if (s.reply_to) options.replyTo = s.reply_to;
-  GmailApp.sendEmail(d.email, 'Your Motherdough fruitcake order ' + d.order_number, text, options);
+  MailApp.sendEmail(d.email, 'Your Motherdough fruitcake order ' + d.order_number, text, options);
 }
 
 function sendBakerEmail_(ctx) {
@@ -83,7 +83,7 @@ function sendBakerEmail_(ctx) {
     d.source ? 'Source: ' + d.source : ''
   ]).join('\n');
 
-  GmailApp.sendEmail(s.baker_emails.join(','),
+  MailApp.sendEmail(s.baker_emails.join(','),
     'New fruitcake order ' + d.order_number + ', ' + d.store_name + ' pickup ' + d.pickup_short, text, {
       htmlBody: renderTemplate_('email_baker', d),
       name: s.from_name,

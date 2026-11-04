@@ -1,4 +1,9 @@
 /**
+ * @OnlyCurrentDoc
+ * Limits the script to the sheet it is attached to (not all of the owner's sheets).
+ */
+
+/**
  * Motherdough Christmas fruitcake pre-order API (Apps Script web app).
  *
  *   GET  ?action=config  -> product, price, stores, collection times, cut-off state, availability

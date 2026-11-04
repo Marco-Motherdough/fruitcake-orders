@@ -26,7 +26,7 @@ function alert_(subject, body) {
     if (!to) to = Session.getEffectiveUser().getEmail();
     if (!to) return;
 
-    GmailApp.sendEmail(to, '[Fruitcake orders] ' + subject,
+    MailApp.sendEmail(to, '[Fruitcake orders] ' + subject,
       body + '\n\nSee the Log tab in the orders sheet for details. ' +
       'Further alerts are paused for ' + (ALERT_THROTTLE_S / 60) + ' minutes.');
   } catch (err) {

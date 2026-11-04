@@ -13,7 +13,7 @@ Items marked **TBD** are still waiting on the business. Do not invent values for
 | Order page (4 screens) | GitHub Pages, custom domain `order.motherdough.co.za` (**TBD**: confirm subdomain) | Static HTML/CSS/vanilla JS, no framework, no build step |
 | Logic / API | Google Apps Script web app | Executes as the owner account, access "Anyone" |
 | Data | Google Sheet (tabs: `Orders`, `Settings`, `Log`) | Owned by the shared business account |
-| Email | Gmail via Apps Script (`GmailApp`) | Sent from the owner account or an alias |
+| Email | `MailApp` (send-only permission) | Sent from the owner account |
 | Code | This GitHub repo | Apps Script synced with `clasp` |
 
 Same pattern as Motherdough's existing apps (GitHub page + Apps Script + Sheets). If a reference repo is provided, follow its conventions. **TBD**: name of reference repo.
