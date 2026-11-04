@@ -3,8 +3,8 @@
   'use strict';
 
   var CONFIG = {
-    // TBD: the Apps Script web app URL (Deploy > Manage deployments > Web app URL).
-    API_URL: 'https://script.google.com/macros/s/REPLACE_WITH_DEPLOYMENT_ID/exec',
+    // Apps Script web app URL (Deploy > Manage deployments). Stays the same across new versions.
+    API_URL: 'https://script.google.com/macros/s/AKfycbx6IzIM80uFVI_BOEOsq09xjYxFARJAM1SCMC4KeM_Jhx2OrWGX0_FhOQY1UeRMtJCZ_g/exec',
     // TBD: shop phone number, shown if the order system cannot be reached.
     SHOP_PHONE: '',
     REQUEST_TIMEOUT_MS: 20000
