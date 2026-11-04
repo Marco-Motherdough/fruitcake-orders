@@ -500,15 +500,19 @@ function placeOrder_(body) {
 
   clearConfigCache_();
 
-  // 5. Emails are NOT sent here, so the customer sees the done screen sooner.
-  // The page sends a follow-up {action: 'send_emails'} request straight after,
-  // and sendPendingEmails() (on a timer) catches any the page missed.
+  // 5. Send the emails now, outside the lock. A failure here must not lose the
+  // order: the row stays 'pending' or shows FAILED, and sendPendingEmails()
+  // (if put on a timer) retries anything still pending.
   var summary = orderSummary_(o);
+  if (s.emails_enabled) {
+    var ctx = { order: o, settings: s, summary: summary };
+    markEmail_(rowIndex, header, 'email_customer_sent', trySend_(sendCustomerEmail_, ctx, o.order_number, 'customer'));
+    markEmail_(rowIndex, header, 'email_baker_sent', trySend_(sendBakerEmail_, ctx, o.order_number, 'baker'));
+  }
 
   // 6. Response for the done screen.
   return {
     ok: true,
-    emails_pending: s.emails_enabled,
     order_number: o.order_number,
     pickup_date: o.pickup_date,
     slot: o.slot,
