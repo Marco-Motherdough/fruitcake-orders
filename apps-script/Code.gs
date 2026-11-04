@@ -1,7 +1,7 @@
 /**
  * Motherdough Christmas fruitcake pre-order API (Apps Script web app).
  *
- *   GET  ?action=config  -> options, prices, slots, store, cut-off state, availability
+ *   GET  ?action=config  -> product, price, stores, collection times, cut-off state, availability
  *   POST (text/plain JSON body) -> place an order
  *
  * The page must POST with Content-Type: text/plain so the browser does not send
@@ -57,9 +57,9 @@ function getConfig_() {
     last_pickup_date: s.last_pickup_date,
     few_left_threshold: s.few_left_threshold,
     max_quantity: s.max_quantity,
-    options: s.options,
+    product: { name: s.product_name, price: s.product_price },
     slots: s.slots,
-    store: { name: s.store_name, address: s.store_address },
+    stores: s.stores,
     shop_phone: s.shop_phone,
     availability: open ? availability : []
   };

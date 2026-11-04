@@ -28,10 +28,12 @@
         <td style="padding:8px 0;border-bottom:1px solid #EFE7DC;vertical-align:top;font-weight:500;"><?= d.lines[i].value ?></td>
       </tr>
       <? } ?>
+      <? if (d.total) { ?>
       <tr>
         <td style="padding:12px 0;font-weight:600;">Total</td>
         <td style="padding:12px 0;font-weight:600;"><?= d.total ?></td>
       </tr>
+      <? } ?>
     </table>
   </td></tr>
 

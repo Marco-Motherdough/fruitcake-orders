@@ -15,37 +15,21 @@ var SETTINGS_DEFAULTS = [
   ['closed_dates', '', 'TBD. Comma-separated yyyy-mm-dd dates with no pickups, e.g. 2026-12-16, 2026-12-20'],
   ['closed_weekdays', '', 'TBD. Comma-separated weekdays with no pickups, e.g. Sun, Mon'],
   ['slots', JSON.stringify([
-    { id: 'morning', label: 'Morning', start: '07:30', end: '11:00' },
-    { id: 'midday', label: 'Midday', start: '11:00', end: '13:30' },
-    { id: 'afternoon', label: 'Afternoon', start: '13:30', end: '16:00' }
-  ]), 'TBD confirm. Collection time slots (JSON).'],
-  ['store_name', '', 'TBD. Pickup store name.'],
-  ['store_address', '', 'TBD. Pickup store address.'],
+    { id: 'day', label: 'Any time', start: '08:00', end: '16:00' }
+  ]), 'Collection window (JSON). One entry = no time choice for the customer.'],
+  ['stores_json', JSON.stringify([
+    { id: 'FHK', name: 'FHK', address: '' },
+    { id: 'JHK', name: 'JHK', address: '' },
+    { id: 'STB', name: 'STB', address: '' }
+  ]), 'Collection stores (JSON). TBD: full store names and addresses.'],
+  ['product_name', 'Rich Dark Fruitcake 700g', 'The cake customers order.'],
+  ['product_price', '', 'TBD. Price per cake in rand, e.g. 350. Blank = no price shown.'],
   ['shop_phone', '', 'TBD. Shown to customers if something goes wrong.'],
   ['baker_emails', '', 'TBD. Comma-separated addresses that get the new-order email.'],
   ['alert_email', '', 'Gets error alerts. Blank = the script owner account.'],
   ['from_name', 'Motherdough', 'Sender name on emails.'],
   ['reply_to', '', 'Reply-to address on customer emails.'],
-  ['order_counter', 0, 'Last order number used. Do not edit during the season.'],
-  ['options_json', JSON.stringify({
-    sizes: [
-      { id: '500g', label: '500 g', price: 220 },
-      { id: '1kg', label: '1 kg', price: 380 },
-      { id: '2kg', label: '2 kg', price: 680 }
-    ],
-    soaks: [
-      { id: 'brandy', label: 'Brandy', price: 0 },
-      { id: 'alcohol_free', label: 'Alcohol-free', price: 0 }
-    ],
-    finishes: [
-      { id: 'apricot', label: 'Plain apricot glaze', price: 0 },
-      { id: 'marzipan', label: 'Marzipan', price: 60 },
-      { id: 'marzipan_icing', label: 'Marzipan and royal icing', price: 95 }
-    ],
-    extras: [
-      { id: 'gift_box', label: 'Gift box with ribbon', price: 45 }
-    ]
-  }, null, 1), 'TBD real prices. Options and prices in rand (JSON). Extras are charged per cake.']
+  ['order_counter', 0, 'Last order number used. Do not edit during the season.']
 ];
 
 function setup() {

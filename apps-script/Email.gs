@@ -16,12 +16,12 @@ function emailData_(ctx) {
     pickup_short: shortDate_(o.pickup_date),
     slot_label: o.slot.label,
     slot_time: o.slot.start + '–' + o.slot.end,
-    store_name: s.store_name,
-    store_address: s.store_address,
+    store_name: o.store.name,
+    store_address: o.store.address,
     shop_phone: s.shop_phone,
     reply_to: s.reply_to,
     lines: ctx.summary,
-    total: money_(o.total),
+    total: o.total === null ? '' : money_(o.total),
     source: o.source
   };
 }
@@ -44,12 +44,12 @@ function sendCustomerEmail_(ctx) {
     '',
     'Order number: ' + d.order_number,
     'Pickup: ' + d.pickup_long + ', ' + d.slot_label + ' ' + d.slot_time,
-    'Store: ' + d.store_name + ', ' + d.store_address,
+    'Store: ' + d.store_name + (d.store_address ? ', ' + d.store_address : ''),
     '',
     'Your order:'
   ].concat(d.lines.map(function (l) { return '  ' + l.label + ': ' + l.value; }))
    .concat([
-    '  Total: ' + d.total,
+    d.total ? '  Total: ' + d.total : '',
     '',
     'Show this email or your order number at the counter when you collect.',
     contact,
@@ -79,12 +79,12 @@ function sendBakerEmail_(ctx) {
     ''
   ].concat(d.lines.map(function (l) { return l.label + ': ' + l.value; }))
    .concat([
-    'Total: ' + d.total,
+    d.total ? 'Total: ' + d.total : '',
     d.source ? 'Source: ' + d.source : ''
   ]).join('\n');
 
   GmailApp.sendEmail(s.baker_emails.join(','),
-    'New fruitcake order ' + d.order_number + ', pickup ' + d.pickup_short, text, {
+    'New fruitcake order ' + d.order_number + ', ' + d.store_name + ' pickup ' + d.pickup_short, text, {
       htmlBody: renderTemplate_('email_baker', d),
       name: s.from_name,
       replyTo: d.email

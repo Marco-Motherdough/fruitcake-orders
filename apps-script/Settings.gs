@@ -14,8 +14,7 @@ var SHEETS = {
 
 var ORDER_COLUMNS = [
   'order_number', 'created_at', 'status', 'pickup_date', 'pickup_slot', 'store',
-  'name', 'cell', 'email', 'size', 'soak', 'finish', 'gift_box', 'quantity',
-  'notes', 'total', 'consent', 'source', 'email_customer_sent', 'email_baker_sent'
+  'name', 'cell', 'email', 'product', 'quantity', 'notes', 'total', 'consent', 'source', 'email_customer_sent', 'email_baker_sent'
 ];
 
 var WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -98,15 +97,22 @@ function parseSettings_(raw) {
     closed_dates: [],
     closed_weekdays: [],
     slots: [],
-    store_name: text('store_name'),
-    store_address: text('store_address'),
+    stores: [],
+    product_name: text('product_name'),
+    product_price: null, // null = price not set yet; totals are hidden
     shop_phone: text('shop_phone'),
     baker_emails: list('baker_emails'),
     alert_email: text('alert_email'),
     from_name: text('from_name') || 'Motherdough',
-    reply_to: text('reply_to'),
-    options: null
+    reply_to: text('reply_to')
   };
+
+  var priceText = text('product_price').replace(/^R\s*/i, '');
+  if (priceText !== '') {
+    var price = Number(priceText);
+    if (!isFinite(price) || price < 0) problems.push('product_price must be a number, e.g. 350');
+    else s.product_price = price;
+  }
 
   // closed_dates may be a single date cell or a comma-separated list.
   if (raw.closed_dates instanceof Date) {
@@ -125,8 +131,7 @@ function parseSettings_(raw) {
     else s.closed_weekdays.push(i);
   });
 
-  if (!s.store_name) problems.push('store_name is empty');
-  if (!s.store_address) problems.push('store_address is empty');
+  if (!s.product_name) problems.push('product_name is empty');
   if (!s.baker_emails.length) problems.push('baker_emails is empty');
   if (s.max_quantity < 1) s.max_quantity = 1;
 
@@ -138,34 +143,17 @@ function parseSettings_(raw) {
     });
   }
 
-  var opts = jsonVal('options_json');
-  if (opts) {
-    s.options = {
-      sizes: normaliseOptions_(opts.sizes, 'sizes', problems),
-      soaks: normaliseOptions_(opts.soaks, 'soaks', problems),
-      finishes: normaliseOptions_(opts.finishes, 'finishes', problems),
-      extras: normaliseOptions_(opts.extras || [], 'extras', problems, true)
-    };
+  var stores = jsonVal('stores_json');
+  if (stores) {
+    if (!Array.isArray(stores) || !stores.length) problems.push('stores_json must be a non-empty JSON list');
+    else s.stores = stores.map(function (x) {
+      if (!x.id || !x.name) problems.push('stores_json entries need an id and a name');
+      return { id: String(x.id), name: String(x.name), address: String(x.address || '') };
+    });
   }
 
   if (problems.length) throw settingsError_('Settings problem: ' + problems.join('; '));
   return s;
-}
-
-function normaliseOptions_(arr, name, problems, allowEmpty) {
-  if (!Array.isArray(arr) || (!arr.length && !allowEmpty)) {
-    problems.push('options_json.' + name + ' must be a non-empty list');
-    return [];
-  }
-  return arr.map(function (o) {
-    var price = Number(o.price || 0);
-    if (!o.id || !o.label || !isFinite(price) || price < 0) {
-      problems.push('options_json.' + name + ' has an invalid entry');
-    }
-    var out = { id: String(o.id), label: String(o.label), price: price };
-    if (o.note) out.note = String(o.note);
-    return out;
-  });
 }
 
 /** Increments order_counter. Call only while holding the script lock. */

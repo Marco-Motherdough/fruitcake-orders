@@ -72,17 +72,14 @@ function placeOrder_(body) {
       status: 'confirmed',
       pickup_date: isoToSheetDate_(o.pickup_date),
       pickup_slot: o.slot.label + ' ' + o.slot.start + '–' + o.slot.end,
-      store: s.store_name,
+      store: o.store.name,
       name: cellText_(o.name),
       cell: cellText_(o.cell),
       email: cellText_(o.email),
-      size: o.size.label,
-      soak: o.soak.label,
-      finish: o.finish.label,
-      gift_box: o.gift_box ? 'yes' : 'no',
+      product: s.product_name,
       quantity: o.quantity,
       notes: cellText_(o.notes),
-      total: o.total,
+      total: o.total === null ? '' : o.total,
       consent: 'yes',
       source: cellText_(o.source),
       email_customer_sent: '',
@@ -109,7 +106,7 @@ function placeOrder_(body) {
     slot: o.slot,
     total: o.total,
     summary: summary,
-    store: { name: s.store_name, address: s.store_address },
+    store: o.store,
     email: o.email
   };
 }
@@ -126,20 +123,8 @@ function validateOrder_(b, s) {
     return null;
   }
 
-  var size = find(s.options.sizes, b.size);
-  if (!size) return bad('size', 'Please choose a cake size.', 'invalid size');
-  var soak = find(s.options.soaks, b.soak);
-  if (!soak) return bad('soak', 'Please choose a soak.', 'invalid soak');
-  var finish = find(s.options.finishes, b.finish);
-  if (!finish) return bad('finish', 'Please choose a finish.', 'invalid finish');
-
-  var extraIds = Array.isArray(b.extras) ? b.extras : [];
-  var extras = [];
-  for (var i = 0; i < extraIds.length; i++) {
-    var ex = find(s.options.extras, extraIds[i]);
-    if (!ex) return bad('extras', 'One of the extras is no longer available. Please check your cake.', 'invalid extra');
-    if (extras.indexOf(ex) === -1) extras.push(ex);
-  }
+  var store = find(s.stores, b.store);
+  if (!store) return bad('store', 'Please choose a store to collect from.', 'invalid store');
 
   var quantity = Number(b.quantity);
   if (!isFinite(quantity) || Math.floor(quantity) !== quantity || quantity < 1 || quantity > s.max_quantity) {
@@ -153,8 +138,7 @@ function validateOrder_(b, s) {
     return bad('pickup_date', 'Please choose a pickup date between ' + shortDate_(earliest) +
       ' and ' + shortDate_(s.last_pickup_date) + '.', 'pickup date outside window: ' + pickup);
   }
-  var slot = null;
-  for (var j = 0; j < s.slots.length; j++) if (s.slots[j].id === b.slot) slot = s.slots[j];
+  var slot = s.slots.length === 1 ? s.slots[0] : find(s.slots, b.slot);
   if (!slot) return bad('slot', 'Please choose a collection time.', 'invalid slot');
 
   var name = str(b.name, 100);
@@ -176,14 +160,12 @@ function validateOrder_(b, s) {
 
   var source = str(b.src, 40).toLowerCase().replace(/[^a-z0-9_-]/g, '');
 
-  var unit = size.price + soak.price + finish.price;
-  extras.forEach(function (e) { unit += e.price; }); // TBD: confirm extras are priced per cake
-  var total = unit * quantity;
+  var unit = s.product_price; // null while the price is not set
+  var total = unit === null ? null : unit * quantity;
 
   return {
     order: {
-      size: size, soak: soak, finish: finish, extras: extras,
-      gift_box: extras.some(function (e) { return e.id === 'gift_box'; }),
+      product: s.product_name, store: store,
       quantity: quantity, unit_price: unit, total: total,
       pickup_date: pickup, slot: slot,
       name: name, cell: cell, email: email, notes: notes, source: source
@@ -203,13 +185,10 @@ function normaliseCell_(v) {
 /** Lines for the done screen and emails: [{label, value}] */
 function orderSummary_(o) {
   var lines = [
-    { label: 'Size', value: o.size.label },
-    { label: 'Soak', value: o.soak.label },
-    { label: 'Finish', value: o.finish.label }
+    { label: 'Cake', value: o.product },
+    { label: 'Quantity', value: String(o.quantity) }
   ];
-  o.extras.forEach(function (e) { lines.push({ label: 'Extra', value: e.label }); });
-  lines.push({ label: 'Quantity', value: String(o.quantity) });
-  if (o.quantity > 1) lines.push({ label: 'Price per cake', value: money_(o.unit_price) });
+  if (o.unit_price !== null && o.quantity > 1) lines.push({ label: 'Price per cake', value: money_(o.unit_price) });
   if (o.notes) lines.push({ label: 'Note', value: o.notes });
   return lines;
 }

@@ -20,10 +20,7 @@
   var state = {
     config: null,
     step: 0,
-    size: null,
-    soak: null,
-    finish: null,
-    extras: [],
+    store: null,
     quantity: 1,
     date: null,
     slot: null,
@@ -140,26 +137,12 @@
   /* ---------- Step 1: cake ---------- */
 
   function renderCakeOptions() {
-    var o = state.config.options;
-    if (!find(o.sizes, state.size)) state.size = o.sizes[0].id;
-    if (!find(o.finishes, state.finish)) state.finish = o.finishes[0].id;
-    if (state.soak && !find(o.soaks, state.soak)) state.soak = null;
-    state.extras = state.extras.filter(function (id) { return find(o.extras, id); });
     state.quantity = Math.min(state.quantity, state.config.max_quantity);
-
-    $('intro-text').textContent = 'Baked to order. Pick up from ' + shortDate(firstDate()) +
+    $('h-step-1').textContent = state.config.product.name;
+    $('intro-text').textContent = 'Baked to order. Collect from ' + shortDate(firstDate()) +
       ' to ' + shortDate(state.config.last_pickup_date) + '. Order by ' +
       shortDate(state.config.last_order_date) + '.';
-
-    renderBoxes('size-options', 'size', o.sizes, true);
-    renderBoxes('soak-options', 'soak', o.soaks, false);
-    renderRows('finish-options', 'finish', 'radio', o.finishes, function (opt) {
-      return opt.price ? '+' + money(opt.price) : 'Included';
-    });
-    $('extras-group').hidden = !o.extras.length;
-    renderRows('extra-options', 'extras', 'checkbox', o.extras, function (opt) {
-      return '+' + money(opt.price);
-    });
+    document.querySelectorAll('.js-price').forEach(function (n) { n.hidden = !hasPrice(); });
     updateQuantity();
   }
 
@@ -168,58 +151,9 @@
     return a.length ? a[0].date : state.config.last_pickup_date;
   }
 
-  function renderBoxes(containerId, key, options, showPrice) {
-    var box = $(containerId);
-    box.textContent = '';
-    options.forEach(function (opt) {
-      var input = el('input', { type: 'radio', name: key, value: opt.id });
-      input.checked = state[key] === opt.id;
-      input.addEventListener('change', function () {
-        state[key] = opt.id;
-        if (key === 'soak') $('soak-error').hidden = true;
-        updateTotals();
-      });
-      var price = showPrice ? el('span', { className: 'box-price', text: money(opt.price) })
-        : (opt.price ? el('span', { className: 'box-price', text: '+' + money(opt.price) }) : null);
-      box.appendChild(el('label', { className: 'box' }, [
-        input,
-        el('span', { className: 'box-body' }, [el('span', { className: 'box-title', text: opt.label }), price])
-      ]));
-    });
-  }
+  function hasPrice() { var p = state.config.product.price; return typeof p === 'number'; }
 
-  function renderRows(containerId, key, type, options, priceText) {
-    var box = $(containerId);
-    box.textContent = '';
-    options.forEach(function (opt) {
-      var input = el('input', { type: type, name: key, value: opt.id });
-      input.checked = type === 'radio' ? state[key] === opt.id : state[key].indexOf(opt.id) !== -1;
-      input.addEventListener('change', function () {
-        if (type === 'radio') state[key] = opt.id;
-        else if (input.checked) state[key].push(opt.id);
-        else state[key] = state[key].filter(function (x) { return x !== opt.id; });
-        updateTotals();
-      });
-      box.appendChild(el('label', { className: 'row' }, [
-        input,
-        el('span', { className: 'row-main' }, [opt.label, opt.note ? el('span', { className: 'row-sub', text: opt.note }) : null]),
-        el('span', { className: 'row-price', text: priceText(opt) })
-      ]));
-    });
-  }
-
-  function unitPrice() {
-    var o = state.config.options;
-    var p = 0;
-    var size = find(o.sizes, state.size), soak = find(o.soaks, state.soak), fin = find(o.finishes, state.finish);
-    if (size) p += size.price;
-    if (soak) p += soak.price;
-    if (fin) p += fin.price;
-    state.extras.forEach(function (id) { var e = find(o.extras, id); if (e) p += e.price; });
-    return p;
-  }
-
-  function total() { return unitPrice() * state.quantity; }
+  function total() { return hasPrice() ? state.config.product.price * state.quantity : 0; }
 
   function updateTotals() {
     $('total-1').textContent = money(total());
@@ -238,9 +172,28 @@
   function renderPickupStatic() {
     var c = state.config;
     $('pickup-intro').textContent = 'We need at least ' + c.lead_days +
-      ' days to bake and soak your cake. Last pickup is ' + longDate(c.last_pickup_date) + '.';
-    $('store-name').textContent = c.store.name;
-    $('store-address').textContent = c.store.address;
+      ' days to bake your cake. Last collection is ' + longDate(c.last_pickup_date) + '.';
+
+    if (c.stores.length === 1) state.store = c.stores[0].id;
+    var stores = $('store-options');
+    stores.textContent = '';
+    c.stores.forEach(function (st) {
+      var input = el('input', { type: 'radio', name: 'store', value: st.id });
+      input.checked = state.store === st.id;
+      input.addEventListener('change', function () { state.store = st.id; $('store-error').hidden = true; });
+      stores.appendChild(el('label', { className: 'row' }, [
+        input,
+        el('span', { className: 'row-main' }, [st.name, st.address ? el('span', { className: 'row-sub', text: st.address }) : null])
+      ]));
+    });
+
+    var single = c.slots.length === 1;
+    $('slot-group').hidden = single;
+    $('slot-single').hidden = !single;
+    if (single) {
+      state.slot = c.slots[0].id;
+      $('slot-single-text').textContent = 'Any time from ' + c.slots[0].start.replace(/^0/, '') + ' to ' + c.slots[0].end.replace(/^0/, '') + ' on your collection day.';
+    }
 
     var box = $('slot-options');
     box.textContent = '';
@@ -251,10 +204,16 @@
       box.appendChild(el('label', { className: 'row' }, [
         input,
         el('span', { className: 'row-main', text: slot.label }),
-        el('span', { className: 'row-price', text: slot.start.replace(/^0/, '') + '–' + slot.end.replace(/^0/, '') })
+        el('span', { className: 'row-price', text: slotTime(slot) })
       ]));
     });
   }
+
+  function slotTime(slot) {
+    return slot.start.replace(/^0/, '') + '–' + slot.end.replace(/^0/, '');
+  }
+
+  function findStore(id) { return find(state.config.stores, id); }
 
   function availabilityMap() {
     var map = {};
@@ -352,21 +311,16 @@
   /* ---------- Step 3: details ---------- */
 
   function renderSummary() {
-    var o = state.config.options;
-    var lines = [
-      ['Size', find(o.sizes, state.size).label],
-      ['Soak', find(o.soaks, state.soak).label],
-      ['Finish', find(o.finishes, state.finish).label]
-    ];
-    state.extras.forEach(function (id) { lines.push(['Extra', find(o.extras, id).label]); });
-    lines.push(['Quantity', String(state.quantity)]);
-    fillDl($('summary-cake'), lines);
+    fillDl($('summary-cake'), [
+      ['Cake', state.config.product.name],
+      ['Quantity', String(state.quantity)]
+    ]);
 
     var slot = find(state.config.slots, state.slot);
     fillDl($('summary-pickup'), [
       ['Date', shortDate(state.date)],
-      ['Time', slot.label + ', ' + slot.start.replace(/^0/, '') + '–' + slot.end.replace(/^0/, '')],
-      ['Store', state.config.store.name]
+      ['Time', (state.config.slots.length === 1 ? '' : slot.label + ', ') + slotTime(slot)],
+      ['Store', findStore(state.store).name]
     ]);
     updateTotals();
   }
@@ -429,10 +383,7 @@
     if (!validateDetails()) return;
 
     var payload = {
-      size: state.size,
-      soak: state.soak,
-      finish: state.finish,
-      extras: state.extras.slice(),
+      store: state.store,
       quantity: state.quantity,
       pickup_date: state.date,
       slot: state.slot,
@@ -490,11 +441,13 @@
     $('done-email').textContent = r.email;
     $('done-number').textContent = r.order_number;
     $('done-date').textContent = longDate(r.pickup_date);
-    $('done-slot').textContent = r.slot.label + ', ' + r.slot.start.replace(/^0/, '') + '–' + r.slot.end.replace(/^0/, '');
+    $('done-slot').textContent = (state.config.slots.length === 1 ? 'Any time ' : r.slot.label + ', ') + slotTime(r.slot);
     $('done-store').textContent = r.store.name;
     $('done-address').textContent = r.store.address;
+    $('done-address-wrap').hidden = !r.store.address;
     fillDl($('done-summary'), r.summary.map(function (l) { return [l.label, l.value]; }));
-    $('done-total').textContent = money(r.total);
+    $('done-total-row').hidden = typeof r.total !== 'number';
+    if (typeof r.total === 'number') $('done-total').textContent = money(r.total);
   }
 
   function icsEscape(s) {
@@ -522,7 +475,7 @@
       'DTSTART:' + icsUtc(r.pickup_date, r.slot.start),
       'DTEND:' + icsUtc(r.pickup_date, r.slot.end),
       'SUMMARY:' + icsEscape('Collect Motherdough fruitcake (' + r.order_number + ')'),
-      'LOCATION:' + icsEscape(r.store.name + ', ' + r.store.address),
+      'LOCATION:' + icsEscape('Motherdough ' + r.store.name + (r.store.address ? ', ' + r.store.address : '')),
       'DESCRIPTION:' + icsEscape('Order ' + r.order_number + '. Show your order number or confirmation email at the counter.'),
       'END:VEVENT',
       'END:VCALENDAR'
@@ -537,8 +490,8 @@
 
   /* ---------- Steps and history ---------- */
 
-  function cakeReady() { return !!(state.size && state.soak && state.finish); }
-  function pickupReady() { return cakeReady() && !!state.date && !!state.slot && isBookable(availabilityMap()[state.date]); }
+  function cakeReady() { return state.quantity >= 1; }
+  function pickupReady() { return cakeReady() && !!findStore(state.store) && !!state.date && !!state.slot && isBookable(availabilityMap()[state.date]); }
 
   /** Highest step the customer may currently open. */
   function maxStep() {
@@ -599,8 +552,7 @@
     state.result = null;
     state.date = null;
     state.slot = null;
-    state.soak = null;
-    state.extras = [];
+    state.store = null;
     state.quantity = 1;
     state.viewMonth = null;
     $('details-form').reset();
@@ -621,12 +573,6 @@
     });
 
     $('to-step-2').addEventListener('click', function () {
-      if (!state.soak) {
-        $('soak-error').hidden = false;
-        var first = document.querySelector('input[name="soak"]');
-        if (first) first.focus();
-        return;
-      }
       goToStep(2, 'push');
     });
 
@@ -636,7 +582,10 @@
     $('to-step-3').addEventListener('click', function () {
       var okDate = !!state.date && isBookable(availabilityMap()[state.date]);
       $('date-error').hidden = okDate;
+      var okStore = !!findStore(state.store);
+      $('store-error').hidden = okStore;
       $('slot-error').hidden = !!state.slot;
+      if (!okStore) { document.querySelector('input[name="store"]').focus(); return; }
       if (!okDate) { var d = document.querySelector('.day.available') || $('cal-next'); d.focus(); return; }
       if (!state.slot) { document.querySelector('input[name="slot"]').focus(); return; }
       goToStep(3, 'push');

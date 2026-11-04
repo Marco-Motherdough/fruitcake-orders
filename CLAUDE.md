@@ -1,6 +1,6 @@
 # Motherdough Christmas fruitcake pre-order app
 
-Customers scan a QR code in store, build their fruitcake on their phone, pick a pickup date at least 14 days out, and leave their details. The order is saved to a Google Sheet, and emails go to the customer (confirmation) and the baker (new order). Payments are **out of scope for v1** (see "Later").
+Customers scan a QR code in store, choose how many Rich Dark Fruitcakes (700g) they want, pick a pickup date at least 14 days out, and leave their details. The order is saved to a Google Sheet, and emails go to the customer (confirmation) and the baker (new order). Payments are **out of scope for v1** (see "Later").
 
 Items marked **TBD** are still waiting on the business. Do not invent values for them; keep them in the Settings sheet or as clearly marked placeholders.
 
@@ -38,8 +38,8 @@ README.md             Setup and deploy steps for humans
 
 Single `index.html`; steps are sections shown one at a time with JS (no page reloads). Browser back button should move between steps (use `history.pushState`).
 
-1. **Cake**: size, soak, finish, extras (gift box), quantity, running total. Button: CHOOSE PICKUP DATE.
-2. **Pickup**: month calendar plus collection time slot. Button: CONTINUE.
+1. **Cake**: one product (Rich Dark Fruitcake 700g), quantity, running total (hidden while no price is set). Button: CHOOSE PICKUP DATE.
+2. **Pickup**: store (FHK, JHK, STB), month calendar, collection time (one window, 8:00–16:00, shown as text; a choice appears only if more than one slot is set). Button: CONTINUE.
 3. **Details**: full name, cell, email, optional gift tag / allergy note, order summary with "Change" link back to step 1, POPIA consent checkbox (required). Button: PLACE ORDER.
 4. **Done**: order number, pickup date and time, store, order summary, total, "Add to calendar" (.ics download), link back to motherdough.co.za.
 
@@ -67,7 +67,7 @@ Look: matches motherdough.co.za, editorial and calm, NOT an app template. No rou
 - Font: Poppins 400/500/600 (Google Fonts). Body letter-spacing ~0.3px.
 - Logo: use the real logo file when supplied (**TBD**). Until then, "MOTHERDOUGH" in Josefin Sans 600, caramel, with "1919" beneath.
 - Buttons: square (radius 2px), min height 50px, uppercase, letter-spacing 2px, 12px. Primary = brown fill, white text. Secondary = 1px brown outline.
-- Size and soak = grid of square bordered boxes; selected = 2px brown border plus bold. Finish, extras and time slots = list rows with native radio/checkbox, thin rule between rows.
+- Store and time-slot choices = list rows with native radio/checkbox, thin rule between rows.
 - Full-width fruitcake photo at top of step 1 (**TBD**: photo).
 - Mobile first, designed at 390px wide; must also look fine on desktop (center a max-width ~480px column).
 - Accessibility: real `<button>`, `<label>` + `<input>`, 44px minimum touch targets, text contrast at least 4.5:1, `aria-current="step"` on the current step, visible focus states.
@@ -84,14 +84,10 @@ All values live in the `Settings` sheet so staff can change them without code. V
 - **Daily capacity:** max cakes per pickup date (`daily_capacity`, **TBD**). Count by quantity, not by order. Optional per-date overrides in a `Capacity` tab (date, max).
 - **Closed days:** list of dates and/or weekdays (`closed_dates`, `closed_weekdays`, **TBD**).
 - **"Few left":** show the dot when remaining for that date is at or below `few_left_threshold` (default 3).
-- **Collection slots** (**TBD**: confirm): Morning 7:30–11:00, Midday 11:00–13:30, Afternoon 13:30–16:00.
-- **Store:** name and address (**TBD**). If more than one store, add a store choice on step 2.
-- **Options and prices** (**TBD**: real values; placeholders below):
-  - Size: 500 g R220, 1 kg R380, 2 kg R680
-  - Soak: Brandy, Alcohol-free (no price difference)
-  - Finish: Plain apricot glaze (included), Marzipan +R60, Marzipan and royal icing +R95
-  - Extras: Gift box with ribbon +R45
-  - Quantity: 1 to `max_quantity` (default 5)
+- **Collection window:** 8am–4pm, from the paper order sheet (`docs/`). Stored in `slots` as one entry.
+- **Stores:** FHK, JHK, STB (`stores_json`; **TBD**: full names and addresses). Capacity is shared across all stores (**TBD**: confirm, or make it per store).
+- **Product:** Rich Dark Fruitcake 700g (`product_name`). Price `product_price` is **TBD**; while blank, no price or total is shown anywhere.
+- **Quantity:** 1 to `max_quantity` (default 5).
 - **Total is always calculated by the script**, never trusted from the page.
 
 ---
@@ -99,7 +95,7 @@ All values live in the `Settings` sheet so staff can change them without code. V
 ## Google Sheet structure
 
 ### `Orders` tab (one row per order, append only)
-`order_number | created_at | status | pickup_date | pickup_slot | store | name | cell | email | size | soak | finish | gift_box | quantity | notes | total | consent | source | email_customer_sent | email_baker_sent`
+`order_number | created_at | status | pickup_date | pickup_slot | store | name | cell | email | product | quantity | notes | total | consent | source | email_customer_sent | email_baker_sent`
 
 - `order_number`: `MD-` + zero-padded counter (MD-0001). Counter stored in Settings, incremented inside the lock.
 - `status`: `confirmed` (v1). Later: `pending_payment`, `paid`, `baked`, `collected`, `cancelled`. Staff may edit this column.
@@ -107,9 +103,9 @@ All values live in the `Settings` sheet so staff can change them without code. V
 - Freeze the header row; format date and money columns.
 
 ### `Settings` tab (key | value)
-`lead_days, last_order_date, last_pickup_date, daily_capacity, few_left_threshold, max_quantity, closed_dates, closed_weekdays, slots, store_name, store_address, baker_emails, alert_email, from_name, reply_to, order_counter, options_json`
+`lead_days, last_order_date, last_pickup_date, daily_capacity, few_left_threshold, max_quantity, closed_dates, closed_weekdays, slots, stores_json, product_name, product_price, shop_phone, baker_emails, alert_email, from_name, reply_to, order_counter`
 
-`options_json` holds sizes, soaks, finishes and extras with prices, so the page and the script share one source of truth.
+The page reads product, price, stores and slots from the API, so the page and the script share one source of truth.
 
 ### `Log` tab
 Timestamp, level, message. Rejected orders and errors go here.
@@ -120,12 +116,12 @@ Timestamp, level, message. Rejected orders and errors go here.
 
 One web app deployment, two actions. Keep responses JSON.
 
-- `GET ?action=config` returns options, prices, slots, store, cut-off state, and per-date availability for the bookable window: `{date, remaining, status: open|few|full|closed}`.
+- `GET ?action=config` returns product, price, stores, slots, cut-off state, and per-date availability for the bookable window: `{date, remaining, status: open|few|full|closed}`.
 - `POST` (order) with body as JSON string. **Send with `Content-Type: text/plain`** to avoid a CORS preflight, which Apps Script web apps do not handle. Parse `e.postData.contents` on the server.
 
 Order handling, in order:
 1. Reject if the honeypot field is filled, or if more than N requests in a short time per email (simple rate limit via `CacheService`).
-2. Validate every field: required fields present, email format, SA cell format, options exist in Settings, quantity in range, consent true, pickup date within the window and not closed, slot valid.
+2. Validate every field: required fields present, email format, SA cell format, store exists in Settings, quantity in range, consent true, pickup date within the window and not closed, slot valid.
 3. Take `LockService.getScriptLock()` (wait up to ~10s). Re-check capacity for that date **inside the lock**, increment the order counter, append the row, release the lock. This prevents double-booking the last slot.
 4. Calculate the total from Settings prices.
 5. Send emails (outside the lock). Record send success in the row. Email failure must not lose the order.

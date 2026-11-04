@@ -53,29 +53,8 @@
           <div class="hero-placeholder" role="img" aria-label="Motherdough Christmas fruitcake">Fruitcake photo</div>
         </figure>
 
-        <h1 class="heading" id="h-step-1" tabindex="-1">Build your fruitcake</h1>
+        <h1 class="heading" id="h-step-1" tabindex="-1">Rich Dark Fruitcake</h1>
         <p class="muted" id="intro-text"></p>
-
-        <fieldset class="group">
-          <legend class="label">SIZE</legend>
-          <div class="box-grid" id="size-options"></div>
-        </fieldset>
-
-        <fieldset class="group">
-          <legend class="label">SOAK</legend>
-          <div class="box-grid box-grid-2" id="soak-options"></div>
-          <p class="field-error" id="soak-error" hidden>Please choose a soak.</p>
-        </fieldset>
-
-        <fieldset class="group">
-          <legend class="label">FINISH</legend>
-          <div class="rows" id="finish-options"></div>
-        </fieldset>
-
-        <fieldset class="group" id="extras-group">
-          <legend class="label">EXTRAS</legend>
-          <div class="rows" id="extra-options"></div>
-        </fieldset>
 
         <div class="group qty-row">
           <span class="label" id="qty-label">QUANTITY</span>
@@ -86,7 +65,7 @@
           </div>
         </div>
 
-        <div class="total-row">
+        <div class="total-row js-price">
           <span class="label">TOTAL</span>
           <span class="total" id="total-1" aria-live="polite"></span>
         </div>
@@ -100,6 +79,12 @@
         <p class="muted" id="pickup-intro"></p>
 
         <p class="notice" id="date-message" role="alert" hidden></p>
+
+        <fieldset class="group">
+          <legend class="label">COLLECT FROM</legend>
+          <div class="rows" id="store-options"></div>
+          <p class="field-error" id="store-error" hidden>Please choose a store.</p>
+        </fieldset>
 
         <div class="group">
           <span class="label" id="date-label">PICKUP DATE</span>
@@ -120,15 +105,14 @@
           <p class="field-error" id="date-error" hidden>Please choose a pickup date.</p>
         </div>
 
-        <fieldset class="group">
+        <fieldset class="group" id="slot-group">
           <legend class="label">COLLECTION TIME</legend>
           <div class="rows" id="slot-options"></div>
           <p class="field-error" id="slot-error" hidden>Please choose a collection time.</p>
         </fieldset>
-
-        <div class="group store-line">
-          <span class="label">COLLECT FROM</span>
-          <p class="store"><span id="store-name"></span><br><span class="muted" id="store-address"></span></p>
+        <div class="group" id="slot-single" hidden>
+          <span class="label">COLLECTION TIME</span>
+          <p class="store" id="slot-single-text"></p>
         </div>
 
         <button type="button" class="btn btn-primary" id="to-step-3">Continue</button>
@@ -174,7 +158,7 @@
           <div class="summary-block">
             <div class="summary-head">
               <span class="label">YOUR ORDER</span>
-              <button type="button" class="text-link" data-goto="1">Change<span class="sr-only"> cake</span></button>
+              <button type="button" class="text-link" data-goto="1">Change<span class="sr-only"> quantity</span></button>
             </div>
             <dl class="summary" id="summary-cake"></dl>
             <div class="summary-head">
@@ -182,7 +166,7 @@
               <button type="button" class="text-link" data-goto="2">Change<span class="sr-only"> pickup</span></button>
             </div>
             <dl class="summary" id="summary-pickup"></dl>
-            <div class="total-row">
+            <div class="total-row js-price">
               <span class="label">TOTAL</span>
               <span class="total" id="total-3"></span>
             </div>
@@ -213,13 +197,13 @@
         <div class="done-block">
           <span class="label">PICKUP</span>
           <p><strong id="done-date"></strong><br><span id="done-slot"></span></p>
-          <p><span id="done-store"></span><br><span class="muted" id="done-address"></span></p>
+          <p><span id="done-store"></span><span id="done-address-wrap"><br><span class="muted" id="done-address"></span></span></p>
         </div>
 
         <div class="done-block">
           <span class="label">YOUR ORDER</span>
           <dl class="summary" id="done-summary"></dl>
-          <div class="total-row">
+          <div class="total-row" id="done-total-row">
             <span class="label">TOTAL</span>
             <span class="total" id="done-total"></span>
           </div>

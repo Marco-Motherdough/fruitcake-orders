@@ -26,7 +26,7 @@
     <div style="font-size:11px;letter-spacing:2px;color:#8A6331;">PICKUP</div>
     <div style="font-weight:500;"><?= d.pickup_long ?></div>
     <div><?= d.slot_label ?>, <?= d.slot_time ?></div>
-    <div style="padding-top:8px;"><?= d.store_name ?><br><span style="color:#7A655A;"><?= d.store_address ?></span></div>
+    <div style="padding-top:8px;"><?= d.store_name ?><? if (d.store_address) { ?><br><span style="color:#7A655A;"><?= d.store_address ?></span><? } ?></div>
   </td></tr>
 
   <tr><td style="padding:20px 0 0;">
@@ -38,10 +38,12 @@
         <td style="padding:8px 0;border-bottom:1px solid #EFE7DC;vertical-align:top;"><?= d.lines[i].value ?></td>
       </tr>
       <? } ?>
+      <? if (d.total) { ?>
       <tr>
         <td style="padding:12px 0;font-weight:600;">Total</td>
         <td style="padding:12px 0;font-weight:600;"><?= d.total ?></td>
       </tr>
+      <? } ?>
     </table>
   </td></tr>
 

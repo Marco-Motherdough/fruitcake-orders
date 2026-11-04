@@ -16,14 +16,14 @@ Fill these in before launch. Most go in the **Settings** tab of the sheet, so th
 
 | What | Where |
 |---|---|
-| Daily capacity (cakes per pickup date) | Settings `daily_capacity` (**required**) |
-| Store name and address | Settings `store_name`, `store_address` (**required**) |
+| Daily capacity (cakes per pickup date, all stores together) | Settings `daily_capacity` (**required**) |
 | Baker email addresses | Settings `baker_emails` (**required**) |
-| Real prices and options | Settings `options_json` (placeholders are in there now) |
-| Is the gift box charged per cake or per order? | The code charges per cake; tell the developer if it should be per order |
+| Price of the 700g cake | Settings `product_price`. While it's blank, no price is shown |
+| Full store names and addresses for FHK, JHK and STB | Settings `stores_json` |
+| Is capacity shared by all stores, or set per store? | Currently shared. Tell the developer if it should be per store |
 | Last order date, last pickup date | Settings (placeholders 2026-12-10, 2026-12-24) |
 | Closed dates and weekdays | Settings `closed_dates`, `closed_weekdays` |
-| Collection slots | Settings `slots` (placeholders 7:30–11:00, 11:00–13:30, 13:30–16:00) |
+| Collection window | Settings `slots` (8:00–16:00 from the order sheet) |
 | Shop phone number | Settings `shop_phone` **and** `SHOP_PHONE` in `web/app.js` (used when the API can't be reached) |
 | Reply-to and alert email | Settings `reply_to`, `alert_email` |
 | Owner Google account | e.g. `orders@motherdough.co.za`, which must be Google Workspace |
