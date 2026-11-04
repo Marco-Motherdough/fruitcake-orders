@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#FFFFFF;color:#4C3329;font-family:Poppins,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;letter-spacing:0.3px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
+
+  <tr><td align="center" style="padding-bottom:24px;border-bottom:1px solid #EFE7DC;">
+    <div style="font-family:'Josefin Sans',Helvetica,Arial,sans-serif;font-weight:600;font-size:22px;letter-spacing:4px;color:#AE8344;">MOTHERDOUGH</div>
+    <div style="font-size:11px;letter-spacing:2px;color:#8A6331;">1919</div>
+    <div style="font-size:11px;letter-spacing:2px;color:#8A6331;padding-top:12px;">CHRISTMAS FRUITCAKE · PRE-ORDER</div>
+  </td></tr>
+
+  <tr><td style="padding:28px 0 8px;">
+    <div style="font-size:28px;line-height:1.25;color:#AE8344;font-weight:400;">Thank you, <?= d.first_name ?></div>
+    <p style="margin:12px 0 0;">Your fruitcake is booked. Here are your order details.</p>
+  </td></tr>
+
+  <tr><td style="padding:20px 0;border-bottom:1px solid #EFE7DC;">
+    <div style="font-size:11px;letter-spacing:2px;color:#8A6331;">ORDER NUMBER</div>
+    <div style="font-size:22px;font-weight:600;"><?= d.order_number ?></div>
+  </td></tr>
+
+  <tr><td style="padding:20px 0;border-bottom:1px solid #EFE7DC;">
+    <div style="font-size:11px;letter-spacing:2px;color:#8A6331;">PICKUP</div>
+    <div style="font-weight:500;"><?= d.pickup_long ?></div>
+    <div><?= d.slot_label ?>, <?= d.slot_time ?></div>
+    <div style="padding-top:8px;"><?= d.store_name ?><br><span style="color:#7A655A;"><?= d.store_address ?></span></div>
+  </td></tr>
+
+  <tr><td style="padding:20px 0 0;">
+    <div style="font-size:11px;letter-spacing:2px;color:#8A6331;padding-bottom:8px;">YOUR ORDER</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <? for (var i = 0; i < d.lines.length; i++) { ?>
+      <tr>
+        <td style="padding:8px 0;border-bottom:1px solid #EFE7DC;color:#7A655A;vertical-align:top;width:40%;"><?= d.lines[i].label ?></td>
+        <td style="padding:8px 0;border-bottom:1px solid #EFE7DC;vertical-align:top;"><?= d.lines[i].value ?></td>
+      </tr>
+      <? } ?>
+      <tr>
+        <td style="padding:12px 0;font-weight:600;">Total</td>
+        <td style="padding:12px 0;font-weight:600;"><?= d.total ?></td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="padding:20px 0;border-top:1px solid #EFE7DC;">
+    <p style="margin:0;">Show this email or your order number at the counter when you collect.</p>
+    <? if (d.reply_to || d.shop_phone) { ?>
+    <p style="margin:12px 0 0;color:#7A655A;">Questions? Reply to this email<? if (d.shop_phone) { ?> or call us on <?= d.shop_phone ?><? } ?>.</p>
+    <? } ?>
+  </td></tr>
+
+  <tr><td align="center" style="padding-top:16px;font-size:12px;color:#7A655A;">
+    <a href="https://motherdough.co.za" style="color:#4C3329;">motherdough.co.za</a>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

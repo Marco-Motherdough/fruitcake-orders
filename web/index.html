@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Christmas Fruitcake Pre-order · Motherdough</title>
+  <meta name="description" content="Pre-order your Motherdough Christmas fruitcake and choose a pickup date.">
+  <meta name="theme-color" content="#FFFFFF">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="page">
+    <header class="masthead">
+      <!-- TBD: replace with the real logo file in assets/ when supplied -->
+      <a class="logo" href="https://motherdough.co.za" aria-label="Motherdough home">
+        <span class="logo-word">MOTHERDOUGH</span>
+        <span class="logo-year">1919</span>
+      </a>
+      <p class="kicker">CHRISTMAS FRUITCAKE · PRE-ORDER</p>
+      <nav aria-label="Order steps" id="step-nav" hidden>
+        <ol class="steps" id="steps"></ol>
+      </nav>
+    </header>
+
+    <main id="main" tabindex="-1">
+
+      <!-- Loading / error / closed states -->
+      <section id="state-loading" class="state" aria-live="polite">
+        <p class="muted">Loading the order form…</p>
+      </section>
+
+      <section id="state-error" class="state" hidden>
+        <h1 class="heading" tabindex="-1">We can’t load the order form right now</h1>
+        <p>Please try again in a few minutes<span class="js-phone-sentence">, or call the shop on <a class="js-phone-link" href="#"></a> to order</span>.</p>
+        <button type="button" class="btn btn-secondary" id="retry">Try again</button>
+      </section>
+
+      <section id="state-closed" class="state" hidden>
+        <h1 class="heading" tabindex="-1" id="closed-heading">Orders are closed</h1>
+        <p id="closed-text">Thank you for your support this season.</p>
+        <p><a class="text-link" href="https://motherdough.co.za">Visit motherdough.co.za</a></p>
+      </section>
+
+      <!-- Step 1: Cake -->
+      <section id="step-1" class="step" hidden aria-labelledby="h-step-1">
+        <figure class="hero">
+          <!-- TBD: replace with the fruitcake photo, e.g. <img src="assets/fruitcake.jpg" alt="..." width="780" height="520"> -->
+          <div class="hero-placeholder" role="img" aria-label="Motherdough Christmas fruitcake">Fruitcake photo</div>
+        </figure>
+
+        <h1 class="heading" id="h-step-1" tabindex="-1">Build your fruitcake</h1>
+        <p class="muted" id="intro-text"></p>
+
+        <fieldset class="group">
+          <legend class="label">SIZE</legend>
+          <div class="box-grid" id="size-options"></div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend class="label">SOAK</legend>
+          <div class="box-grid box-grid-2" id="soak-options"></div>
+          <p class="field-error" id="soak-error" hidden>Please choose a soak.</p>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend class="label">FINISH</legend>
+          <div class="rows" id="finish-options"></div>
+        </fieldset>
+
+        <fieldset class="group" id="extras-group">
+          <legend class="label">EXTRAS</legend>
+          <div class="rows" id="extra-options"></div>
+        </fieldset>
+
+        <div class="group qty-row">
+          <span class="label" id="qty-label">QUANTITY</span>
+          <div class="qty" role="group" aria-labelledby="qty-label">
+            <button type="button" class="qty-btn" id="qty-minus" aria-label="One fewer cake">−</button>
+            <output id="qty-value" aria-live="polite">1</output>
+            <button type="button" class="qty-btn" id="qty-plus" aria-label="One more cake">+</button>
+          </div>
+        </div>
+
+        <div class="total-row">
+          <span class="label">TOTAL</span>
+          <span class="total" id="total-1" aria-live="polite"></span>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="to-step-2">Choose pickup date</button>
+      </section>
+
+      <!-- Step 2: Pickup -->
+      <section id="step-2" class="step" hidden aria-labelledby="h-step-2">
+        <h1 class="heading" id="h-step-2" tabindex="-1">Choose your pickup</h1>
+        <p class="muted" id="pickup-intro"></p>
+
+        <p class="notice" id="date-message" role="alert" hidden></p>
+
+        <div class="group">
+          <span class="label" id="date-label">PICKUP DATE</span>
+          <div class="cal">
+            <div class="cal-head">
+              <button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button>
+              <h2 class="cal-month" id="cal-month" aria-live="polite"></h2>
+              <button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button>
+            </div>
+            <table class="cal-grid" aria-labelledby="cal-month">
+              <thead>
+                <tr><th scope="col" abbr="Monday">M</th><th scope="col" abbr="Tuesday">T</th><th scope="col" abbr="Wednesday">W</th><th scope="col" abbr="Thursday">T</th><th scope="col" abbr="Friday">F</th><th scope="col" abbr="Saturday">S</th><th scope="col" abbr="Sunday">S</th></tr>
+              </thead>
+              <tbody id="cal-body"></tbody>
+            </table>
+            <p class="cal-legend muted"><span class="dot" aria-hidden="true"></span> Few left <span class="legend-full">Full or closed</span></p>
+          </div>
+          <p class="field-error" id="date-error" hidden>Please choose a pickup date.</p>
+        </div>
+
+        <fieldset class="group">
+          <legend class="label">COLLECTION TIME</legend>
+          <div class="rows" id="slot-options"></div>
+          <p class="field-error" id="slot-error" hidden>Please choose a collection time.</p>
+        </fieldset>
+
+        <div class="group store-line">
+          <span class="label">COLLECT FROM</span>
+          <p class="store"><span id="store-name"></span><br><span class="muted" id="store-address"></span></p>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="to-step-3">Continue</button>
+      </section>
+
+      <!-- Step 3: Details -->
+      <section id="step-3" class="step" hidden aria-labelledby="h-step-3">
+        <h1 class="heading" id="h-step-3" tabindex="-1">Your details</h1>
+
+        <div class="notice" id="submit-error" role="alert" hidden></div>
+
+        <form id="details-form" novalidate>
+          <div class="field">
+            <label for="f-name">Full name</label>
+            <input id="f-name" name="name" type="text" autocomplete="name" maxlength="100" required aria-describedby="e-name">
+            <p class="field-error" id="e-name" hidden>Please enter your full name.</p>
+          </div>
+
+          <div class="field">
+            <label for="f-cell">Cell number</label>
+            <input id="f-cell" name="cell" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="082 123 4567" required aria-describedby="e-cell">
+            <p class="field-error" id="e-cell" hidden>Please enter a South African cell number, like 082 123 4567.</p>
+          </div>
+
+          <div class="field">
+            <label for="f-email">Email</label>
+            <input id="f-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254" required aria-describedby="h-email e-email">
+            <p class="hint" id="h-email">We’ll send your confirmation here.</p>
+            <p class="field-error" id="e-email" hidden>Please enter a valid email address.</p>
+          </div>
+
+          <div class="field">
+            <label for="f-notes">Gift tag or allergy note <span class="optional">(optional)</span></label>
+            <textarea id="f-notes" name="notes" rows="3" maxlength="500"></textarea>
+          </div>
+
+          <!-- Honeypot: hidden from people, bots fill it in -->
+          <div class="hp" aria-hidden="true">
+            <label for="f-website">Website</label>
+            <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
+          </div>
+
+          <div class="summary-block">
+            <div class="summary-head">
+              <span class="label">YOUR ORDER</span>
+              <button type="button" class="text-link" data-goto="1">Change<span class="sr-only"> cake</span></button>
+            </div>
+            <dl class="summary" id="summary-cake"></dl>
+            <div class="summary-head">
+              <span class="label">PICKUP</span>
+              <button type="button" class="text-link" data-goto="2">Change<span class="sr-only"> pickup</span></button>
+            </div>
+            <dl class="summary" id="summary-pickup"></dl>
+            <div class="total-row">
+              <span class="label">TOTAL</span>
+              <span class="total" id="total-3"></span>
+            </div>
+          </div>
+
+          <div class="field consent">
+            <label class="check-row">
+              <input type="checkbox" id="f-consent" name="consent" required aria-describedby="e-consent">
+              <span>I agree that Motherdough may use my name, cell and email to process this order and contact me about it. My details won’t be used for anything else.</span>
+            </label>
+            <p class="field-error" id="e-consent" hidden>Please tick the box to continue.</p>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="place-order">Place order</button>
+        </form>
+      </section>
+
+      <!-- Step 4: Done -->
+      <section id="step-4" class="step" hidden aria-labelledby="h-step-4">
+        <h1 class="heading" id="h-step-4" tabindex="-1">Thank you</h1>
+        <p>Your fruitcake is booked. A confirmation is on its way to <strong id="done-email"></strong>.</p>
+
+        <div class="done-block">
+          <span class="label">ORDER NUMBER</span>
+          <p class="order-number" id="done-number"></p>
+        </div>
+
+        <div class="done-block">
+          <span class="label">PICKUP</span>
+          <p><strong id="done-date"></strong><br><span id="done-slot"></span></p>
+          <p><span id="done-store"></span><br><span class="muted" id="done-address"></span></p>
+        </div>
+
+        <div class="done-block">
+          <span class="label">YOUR ORDER</span>
+          <dl class="summary" id="done-summary"></dl>
+          <div class="total-row">
+            <span class="label">TOTAL</span>
+            <span class="total" id="done-total"></span>
+          </div>
+        </div>
+
+        <p>Show your confirmation email or order number at the counter when you collect.</p>
+
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" id="add-calendar">Add to calendar</button>
+          <a class="btn btn-primary" href="https://motherdough.co.za">Back to motherdough.co.za</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
