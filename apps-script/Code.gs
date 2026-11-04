@@ -37,14 +37,35 @@ function doPost(e) {
       log_('WARN', 'Rejected order: request body was not a JSON object');
       return json_(fail_('Sorry, something went wrong sending your order. Please try again.'));
     }
+    if (body.action === 'send_emails') return json_(sendOrderEmails_(body.order_number));
     return json_(placeOrder_(body));
   } catch (err) {
     return json_(handleUnexpected_(err, 'doPost'));
   }
 }
 
-/** Builds the public config the page needs. No customer data in here. */
+var CONFIG_CACHE_KEY = 'config_v1';
+var CONFIG_CACHE_S = 120; // Settings changes show on the page within 2 minutes
+
+function clearConfigCache_() {
+  try { CacheService.getScriptCache().remove(CONFIG_CACHE_KEY); } catch (e) { /* ignore */ }
+}
+
+/** Config for the page, cached briefly so most page loads skip reading the sheet. */
 function getConfig_() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get(CONFIG_CACHE_KEY);
+  if (hit) {
+    var cfg = JSON.parse(hit);
+    if (cfg.today === todayIso_()) return cfg;
+  }
+  var fresh = buildConfig_();
+  try { cache.put(CONFIG_CACHE_KEY, JSON.stringify(fresh), CONFIG_CACHE_S); } catch (e) { /* too big: skip */ }
+  return fresh;
+}
+
+/** Builds the public config the page needs. No customer data in here. */
+function buildConfig_() {
   var s = readSettings_();
   var today = todayIso_();
   var availability = computeAvailability_(s, bookedByDate_(), capacityOverrides_(), today);

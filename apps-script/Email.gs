@@ -88,10 +88,19 @@ function sendBakerEmail_(ctx) {
     d.source ? 'Source: ' + d.source : ''
   ]).join('\n');
 
-  MailApp.sendEmail(s.baker_emails.join(','),
-    'New fruitcake order ' + d.order_number + ', ' + d.store_name + ' pickup ' + d.pickup_short, text, {
+  var to = s.baker_emails.join(',');
+  var subject = 'New fruitcake order ' + d.order_number + ', ' + d.store_name + ' pickup ' + d.pickup_short;
+  try {
+    MailApp.sendEmail(to, subject, text, {
       htmlBody: renderTemplate_('email_baker', d),
       name: s.from_name,
       replyTo: d.email
     });
+  } catch (err) {
+    // Google sometimes refuses the full version (seen when sender, recipient and
+    // reply-to overlap). Retry once as plain text with no reply-to, so the
+    // bakery always gets the order.
+    Utilities.sleep(1500);
+    MailApp.sendEmail(to, subject, text + '\n\n(Reply to the customer at ' + d.email + ')', { name: s.from_name });
+  }
 }

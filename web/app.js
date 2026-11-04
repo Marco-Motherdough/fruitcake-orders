@@ -116,12 +116,12 @@
     });
   }
 
-  function request(method, body) {
+  function request(method, body, keepalive) {
     if (DEMO) return demoRequest(method, body);
     var url = CONFIG.API_URL + (method === 'GET' ? '?action=config&_=' + Date.now() : '');
     var controller = 'AbortController' in window ? new AbortController() : null;
     var timer = controller ? setTimeout(function () { controller.abort(); }, CONFIG.REQUEST_TIMEOUT_MS) : null;
-    var opts = { method: method, redirect: 'follow', signal: controller ? controller.signal : undefined };
+    var opts = { method: method, redirect: 'follow', signal: controller ? controller.signal : undefined, keepalive: !!keepalive };
     if (body) {
       // text/plain keeps this a "simple" request, so the browser skips the CORS preflight.
       opts.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
@@ -155,8 +155,20 @@
 
   /* ---------- Loading config ---------- */
 
+  // Shown straight away so step 1 appears instantly; replaced when the real
+  // config arrives (product name, price, stores and dates come from the sheet).
+  var STARTUP_CONFIG = {
+    startup: true,
+    product: { name: 'Rich Dark Fruitcake 700g', price: null },
+    max_quantity: 5,
+    availability: [], slots: [], stores: []
+  };
+
   function loadConfig() {
-    showState('loading');
+    state.config = STARTUP_CONFIG;
+    renderCakeOptions();
+    goToStep(1, 'replace');
+
     return request('GET').then(function (cfg) {
       if (!cfg || !cfg.ok) throw new Error((cfg && cfg.error) || 'Bad config');
       state.config = cfg;
@@ -166,10 +178,22 @@
         'Every pickup date for Christmas ' + cfg.season_year + ' is full. Thank you for your support.');
       renderCakeOptions();
       renderPickupStatic();
-      goToStep(1, 'replace');
+      if (state.waitingForDates) {
+        state.waitingForDates = false;
+        setDatesButton(false);
+        goToStep(2, 'push');
+      }
     }).catch(function () {
+      state.waitingForDates = false;
+      setDatesButton(false);
       showState('error');
     });
+  }
+
+  function setDatesButton(loading) {
+    var b = $('to-step-2');
+    b.disabled = loading;
+    b.textContent = loading ? 'Loading dates…' : 'Choose pickup date';
   }
 
   function showState(which) {
@@ -202,7 +226,8 @@
   function renderCakeOptions() {
     state.quantity = Math.min(state.quantity, state.config.max_quantity);
     $('h-step-1').textContent = state.config.product.name;
-    $('intro-text').textContent = 'Baked to order. Collect from ' + shortDate(firstDate()) +
+    $('intro-text').textContent = state.config.startup ? 'Baked to order.' :
+      'Baked to order. Collect from ' + shortDate(firstDate()) +
       ' to ' + shortDate(state.config.last_pickup_date) + '. Order by ' +
       shortDate(state.config.last_order_date) + '.';
     document.querySelectorAll('.js-price').forEach(function (n) { n.hidden = !hasPrice(); });
@@ -464,6 +489,11 @@
       setSubmitting(false);
       if (res && res.ok) {
         state.result = res;
+        if (res.emails_pending) {
+          // Ask the script to send the emails now that the order is saved.
+          // keepalive lets it finish even if the customer closes the page.
+          request('POST', { action: 'send_emails', order_number: res.order_number }, true).catch(function () {});
+        }
         renderDone();
         goToStep(4, 'push');
         return;
@@ -588,7 +618,7 @@
     if (!state.config) return;
     if (state.result && n < 4) { resetOrder(); n = 1; mode = 'replace'; }
     var wanted = n;
-    n = Math.max(1, Math.min(n, maxStep()));
+    n = Math.max(1, Math.min(n, state.config.startup ? 1 : maxStep()));
     if (n !== wanted && mode === 'none') mode = 'replace';
 
     showState(null);
@@ -626,7 +656,7 @@
   /* ---------- Wiring ---------- */
 
   function bind() {
-    $('retry').addEventListener('click', loadConfig);
+    $('retry').addEventListener('click', function () { window.location.reload(); });
 
     $('qty-minus').addEventListener('click', function () {
       if (state.quantity > 1) { state.quantity--; updateQuantity(); }
@@ -636,6 +666,7 @@
     });
 
     $('to-step-2').addEventListener('click', function () {
+      if (state.config.startup) { state.waitingForDates = true; setDatesButton(true); return; }
       goToStep(2, 'push');
     });
 

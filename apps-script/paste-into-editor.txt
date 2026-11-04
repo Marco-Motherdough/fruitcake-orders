@@ -41,14 +41,35 @@ function doPost(e) {
       log_('WARN', 'Rejected order: request body was not a JSON object');
       return json_(fail_('Sorry, something went wrong sending your order. Please try again.'));
     }
+    if (body.action === 'send_emails') return json_(sendOrderEmails_(body.order_number));
     return json_(placeOrder_(body));
   } catch (err) {
     return json_(handleUnexpected_(err, 'doPost'));
   }
 }
 
-/** Builds the public config the page needs. No customer data in here. */
+var CONFIG_CACHE_KEY = 'config_v1';
+var CONFIG_CACHE_S = 120; // Settings changes show on the page within 2 minutes
+
+function clearConfigCache_() {
+  try { CacheService.getScriptCache().remove(CONFIG_CACHE_KEY); } catch (e) { /* ignore */ }
+}
+
+/** Config for the page, cached briefly so most page loads skip reading the sheet. */
 function getConfig_() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get(CONFIG_CACHE_KEY);
+  if (hit) {
+    var cfg = JSON.parse(hit);
+    if (cfg.today === todayIso_()) return cfg;
+  }
+  var fresh = buildConfig_();
+  try { cache.put(CONFIG_CACHE_KEY, JSON.stringify(fresh), CONFIG_CACHE_S); } catch (e) { /* too big: skip */ }
+  return fresh;
+}
+
+/** Builds the public config the page needs. No customer data in here. */
+function buildConfig_() {
   var s = readSettings_();
   var today = todayIso_();
   var availability = computeAvailability_(s, bookedByDate_(), capacityOverrides_(), today);
@@ -463,8 +484,8 @@ function placeOrder_(body) {
       total: o.total === null ? '' : o.total,
       consent: 'yes',
       source: cellText_(o.source),
-      email_customer_sent: s.emails_enabled ? '' : 'off',
-      email_baker_sent: s.emails_enabled ? '' : 'off'
+      email_customer_sent: s.emails_enabled ? 'pending' : 'off',
+      email_baker_sent: s.emails_enabled ? 'pending' : 'off'
     };
     // One write: set the row's formats and values together just below the last row.
     rowIndex = sh.getLastRow() + 1;
@@ -477,17 +498,17 @@ function placeOrder_(body) {
     lock.releaseLock();
   }
 
-  // 5. Emails, outside the lock. A failure here must not lose the order.
+  clearConfigCache_();
+
+  // 5. Emails are NOT sent here, so the customer sees the done screen sooner.
+  // The page sends a follow-up {action: 'send_emails'} request straight after,
+  // and sendPendingEmails() (on a timer) catches any the page missed.
   var summary = orderSummary_(o);
-  if (s.emails_enabled) {
-    var emailCtx = { order: o, settings: s, summary: summary };
-    markEmail_(rowIndex, header, 'email_customer_sent', trySend_(sendCustomerEmail_, emailCtx, o.order_number, 'customer'));
-    markEmail_(rowIndex, header, 'email_baker_sent', trySend_(sendBakerEmail_, emailCtx, o.order_number, 'baker'));
-  }
 
   // 6. Response for the done screen.
   return {
     ok: true,
+    emails_pending: s.emails_enabled,
     order_number: o.order_number,
     pickup_date: o.pickup_date,
     slot: o.slot,
@@ -609,6 +630,94 @@ function rateLimitOk_(email) {
   if (count >= RATE_LIMIT_MAX) return false;
   cache.put(key, String(count + 1), RATE_LIMIT_WINDOW_S);
   return true;
+}
+
+/* ---------- Sending emails after the order is saved ---------- */
+
+/** Reads the Orders tab. Returns { sh, header, data } where data[0] is the header row. */
+function readOrders_() {
+  var sh = sheet_(SHEETS.ORDERS);
+  var data = sh.getRange(1, 1, Math.max(sh.getLastRow(), 1), sh.getLastColumn()).getValues();
+  var header = data[0].map(function (h) { return String(h).trim(); });
+  return { sh: sh, header: header, data: data };
+}
+
+/** Rebuilds the order details the emails need from a saved Orders row. */
+function orderFromRow_(row, header, s) {
+  function v(name) { var i = header.indexOf(name); return i === -1 ? '' : row[i]; }
+  var slotText = String(v('pickup_slot'));
+  var slot = s.slots.filter(function (x) { return slotText === x.label + ' ' + x.start + '–' + x.end; })[0] || s.slots[0];
+  var storeText = String(v('store'));
+  var store = s.stores.filter(function (x) { return x.name === storeText || x.id === storeText; })[0] ||
+    { id: storeText, name: storeText, address: '' };
+  var quantity = Number(v('quantity')) || 1;
+  var total = v('total') === '' ? null : Number(v('total'));
+  return {
+    order_number: String(v('order_number')),
+    pickup_date: toIso_(v('pickup_date')),
+    slot: slot, store: store, product: String(v('product')),
+    quantity: quantity, total: total, unit_price: total === null ? null : total / quantity,
+    name: String(v('name')), cell: String(v('cell')), email: String(v('email')),
+    notes: String(v('notes')), source: String(v('source'))
+  };
+}
+
+/**
+ * Sends the emails for one order, once. Safe to call repeatedly: a row is
+ * claimed (pending -> sending) under the lock, so nothing is sent twice.
+ */
+function sendOrderEmails_(orderNumber) {
+  if (!/^MD-\d{4,}$/.test(String(orderNumber || ''))) return fail_('Unknown order.');
+  var s = readSettings_();
+  var claimed = claimPending_(function (num) { return num === orderNumber; });
+  claimed.forEach(function (c) { sendClaimed_(c, s); });
+  return { ok: true };
+}
+
+/** Run on a time-driven trigger (every 5 minutes) to send any emails the page missed. */
+function sendPendingEmails() {
+  var s = readSettings_();
+  if (!s.emails_enabled) return;
+  var cutoff = new Date(Date.now() - 60 * 1000); // leave very new orders to the page's own request
+  var claimed = claimPending_(function (num, created) { return !(created instanceof Date) || created < cutoff; });
+  claimed.forEach(function (c) { sendClaimed_(c, s); });
+}
+
+function claimPending_(match) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(LOCK_WAIT_MS)) return [];
+  var out = [];
+  try {
+    var t = readOrders_();
+    var iNum = t.header.indexOf('order_number'), iCreated = t.header.indexOf('created_at');
+    var iCust = t.header.indexOf('email_customer_sent'), iBaker = t.header.indexOf('email_baker_sent');
+    for (var r = 1; r < t.data.length; r++) {
+      var row = t.data[r];
+      var who = [];
+      if (row[iCust] === 'pending') who.push('customer');
+      if (row[iBaker] === 'pending') who.push('baker');
+      if (!who.length || !match(String(row[iNum]), row[iCreated])) continue;
+      who.forEach(function (w) {
+        t.sh.getRange(r + 1, (w === 'customer' ? iCust : iBaker) + 1).setValue('sending');
+      });
+      out.push({ rowIndex: r + 1, row: row, header: t.header, who: who });
+    }
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
+  return out;
+}
+
+function sendClaimed_(c, s) {
+  var o = orderFromRow_(c.row, c.header, s);
+  var ctx = { order: o, settings: s, summary: orderSummary_(o) };
+  if (c.who.indexOf('customer') !== -1) {
+    markEmail_(c.rowIndex, c.header, 'email_customer_sent', trySend_(sendCustomerEmail_, ctx, o.order_number, 'customer'));
+  }
+  if (c.who.indexOf('baker') !== -1) {
+    markEmail_(c.rowIndex, c.header, 'email_baker_sent', trySend_(sendBakerEmail_, ctx, o.order_number, 'baker'));
+  }
 }
 
 function trySend_(fn, ctx, orderNumber, who) {
@@ -772,12 +881,21 @@ function sendBakerEmail_(ctx) {
     d.source ? 'Source: ' + d.source : ''
   ]).join('\n');
 
-  MailApp.sendEmail(s.baker_emails.join(','),
-    'New fruitcake order ' + d.order_number + ', ' + d.store_name + ' pickup ' + d.pickup_short, text, {
+  var to = s.baker_emails.join(',');
+  var subject = 'New fruitcake order ' + d.order_number + ', ' + d.store_name + ' pickup ' + d.pickup_short;
+  try {
+    MailApp.sendEmail(to, subject, text, {
       htmlBody: renderTemplate_('email_baker', d),
       name: s.from_name,
       replyTo: d.email
     });
+  } catch (err) {
+    // Google sometimes refuses the full version (seen when sender, recipient and
+    // reply-to overlap). Retry once as plain text with no reply-to, so the
+    // bakery always gets the order.
+    Utilities.sleep(1500);
+    MailApp.sendEmail(to, subject, text + '\n\n(Reply to the customer at ' + d.email + ')', { name: s.from_name });
+  }
 }
 
 // ===== Setup.gs =====
