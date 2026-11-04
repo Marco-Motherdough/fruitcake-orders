@@ -116,12 +116,12 @@
     });
   }
 
-  function request(method, body, keepalive) {
+  function request(method, body) {
     if (DEMO) return demoRequest(method, body);
     var url = CONFIG.API_URL + (method === 'GET' ? '?action=config&_=' + Date.now() : '');
     var controller = 'AbortController' in window ? new AbortController() : null;
     var timer = controller ? setTimeout(function () { controller.abort(); }, CONFIG.REQUEST_TIMEOUT_MS) : null;
-    var opts = { method: method, redirect: 'follow', signal: controller ? controller.signal : undefined, keepalive: !!keepalive };
+    var opts = { method: method, redirect: 'follow', signal: controller ? controller.signal : undefined };
     if (body) {
       // text/plain keeps this a "simple" request, so the browser skips the CORS preflight.
       opts.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
@@ -490,9 +490,9 @@
       if (res && res.ok) {
         state.result = res;
         if (res.emails_pending) {
-          // Ask the script to send the emails now that the order is saved.
-          // keepalive lets it finish even if the customer closes the page.
-          request('POST', { action: 'send_emails', order_number: res.order_number }, true).catch(function () {});
+          // Ask the script to send the emails now that the order is saved. If this
+          // never arrives, the sendPendingEmails timer sends them within minutes.
+          request('POST', { action: 'send_emails', order_number: res.order_number }).catch(function () {});
         }
         renderDone();
         goToStep(4, 'push');
