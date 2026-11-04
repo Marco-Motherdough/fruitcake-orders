@@ -39,7 +39,7 @@ README.md             Setup and deploy steps for humans
 Single `index.html`; steps are sections shown one at a time with JS (no page reloads). Browser back button should move between steps (use `history.pushState`).
 
 1. **Cake**: one product (Rich Dark Fruitcake 700g), quantity, running total (hidden while no price is set). Button: CHOOSE PICKUP DATE.
-2. **Pickup**: store (FHK, JHK, STB), month calendar, collection time (one window, 8:00–16:00, shown as text; a choice appears only if more than one slot is set). Button: CONTINUE.
+2. **Pickup**: store (Franschhoek, Jonkershoek, Stellenbosch), month calendar, collection time (one window, 8:00–16:00, shown as text; a choice appears only if more than one slot is set). Button: CONTINUE.
 3. **Details**: full name, cell, email, optional gift tag / allergy note, order summary with "Change" link back to step 1, POPIA consent checkbox (required). Button: PLACE ORDER.
 4. **Done**: order number, pickup date and time, store, order summary, total, "Add to calendar" (.ics download), link back to motherdough.co.za.
 
@@ -85,7 +85,7 @@ All values live in the `Settings` sheet so staff can change them without code. V
 - **Closed days:** list of dates and/or weekdays (`closed_dates`, `closed_weekdays`, **TBD**).
 - **"Few left":** show the dot when remaining for that date is at or below `few_left_threshold` (default 3).
 - **Collection window:** 8am–4pm, from the paper order sheet (`docs/`). Stored in `slots` as one entry.
-- **Stores:** FHK, JHK, STB (`stores_json`; **TBD**: full names and addresses). Capacity is shared across all stores (**TBD**: confirm, or make it per store).
+- **Stores:** Franschhoek (FHK), Jonkershoek (JHK), Stellenbosch (STB) (`stores_json`; **TBD**: addresses). Capacity is shared across all stores (**TBD**: confirm, or make it per store).
 - **Product:** Rich Dark Fruitcake 700g (`product_name`). Price `product_price` is **TBD**; while blank, no price or total is shown anywhere.
 - **Quantity:** 1 to `max_quantity` (default 5).
 - **Total is always calculated by the script**, never trusted from the page.

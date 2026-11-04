@@ -18,10 +18,10 @@ var SETTINGS_DEFAULTS = [
     { id: 'day', label: 'Any time', start: '08:00', end: '16:00' }
   ]), 'Collection window (JSON). One entry = no time choice for the customer.'],
   ['stores_json', JSON.stringify([
-    { id: 'FHK', name: 'FHK', address: '' },
-    { id: 'JHK', name: 'JHK', address: '' },
-    { id: 'STB', name: 'STB', address: '' }
-  ]), 'Collection stores (JSON). TBD: full store names and addresses.'],
+    { id: 'FHK', name: 'Franschhoek', address: '' },
+    { id: 'JHK', name: 'Jonkershoek', address: '' },
+    { id: 'STB', name: 'Stellenbosch', address: '' }
+  ]), 'Collection stores (JSON). TBD: store addresses.'],
   ['product_name', 'Rich Dark Fruitcake 700g', 'The cake customers order.'],
   ['product_price', '', 'TBD. Price per cake in rand, e.g. 350. Blank = no price shown.'],
   ['shop_phone', '', 'TBD. Shown to customers if something goes wrong.'],

@@ -42,7 +42,7 @@ function placeOrder_(body) {
     return fail_('We are very busy right now. Your order has not been placed yet, please try again.', { code: 'busy' });
   }
 
-  var rowIndex;
+  var rowIndex, header;
   try {
     var availability = computeAvailability_(s, bookedByDate_(), capacityOverrides_(), today);
     var day = null;
@@ -65,7 +65,7 @@ function placeOrder_(body) {
 
     o.order_number = nextOrderNumber_();
     var sh = sheet_(SHEETS.ORDERS);
-    var header = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
+    header = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
     var record = {
       order_number: o.order_number,
       created_at: new Date(),
@@ -74,7 +74,7 @@ function placeOrder_(body) {
       pickup_slot: o.slot.label + ' ' + o.slot.start + '–' + o.slot.end,
       store: o.store.name,
       name: cellText_(o.name),
-      cell: "'" + o.cell, // keep the leading 0
+      cell: o.cell, // the row's cell format is text, so the leading 0 stays
       email: cellText_(o.email),
       product: s.product_name,
       quantity: o.quantity,
@@ -82,12 +82,15 @@ function placeOrder_(body) {
       total: o.total === null ? '' : o.total,
       consent: 'yes',
       source: cellText_(o.source),
-      email_customer_sent: '',
-      email_baker_sent: ''
+      email_customer_sent: s.emails_enabled ? '' : 'off',
+      email_baker_sent: s.emails_enabled ? '' : 'off'
     };
-    sh.appendRow(header.map(function (h) { return record.hasOwnProperty(h) ? record[h] : ''; }));
-    rowIndex = sh.getLastRow();
-    formatOrderRow_(sh, header, rowIndex);
+    // One write: set the row's formats and values together just below the last row.
+    rowIndex = sh.getLastRow() + 1;
+    if (rowIndex > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 200);
+    var range = sh.getRange(rowIndex, 1, 1, header.length);
+    range.setNumberFormats([orderRowFormats_(header)]);
+    range.setValues([header.map(function (h) { return record.hasOwnProperty(h) ? record[h] : ''; })]);
     SpreadsheetApp.flush();
   } finally {
     lock.releaseLock();
@@ -97,11 +100,8 @@ function placeOrder_(body) {
   var summary = orderSummary_(o);
   if (s.emails_enabled) {
     var emailCtx = { order: o, settings: s, summary: summary };
-    markEmail_(rowIndex, 'email_customer_sent', trySend_(sendCustomerEmail_, emailCtx, o.order_number, 'customer'));
-    markEmail_(rowIndex, 'email_baker_sent', trySend_(sendBakerEmail_, emailCtx, o.order_number, 'baker'));
-  } else {
-    markEmail_(rowIndex, 'email_customer_sent', 'off');
-    markEmail_(rowIndex, 'email_baker_sent', 'off');
+    markEmail_(rowIndex, header, 'email_customer_sent', trySend_(sendCustomerEmail_, emailCtx, o.order_number, 'customer'));
+    markEmail_(rowIndex, header, 'email_baker_sent', trySend_(sendBakerEmail_, emailCtx, o.order_number, 'baker'));
   }
 
   // 6. Response for the done screen.
@@ -179,18 +179,15 @@ function validateOrder_(b, s) {
   };
 }
 
-/** Date, money and text formats for one Orders row (new rows don't always inherit column formats). */
-function formatOrderRow_(sh, header, row) {
+/** Number formats for one Orders row, in header order (new rows don't always inherit column formats). */
+function orderRowFormats_(header) {
   var formats = {
     created_at: 'yyyy-mm-dd hh:mm',
     pickup_date: 'ddd yyyy-mm-dd',
     cell: '@',
     total: '"R"#,##0'
   };
-  Object.keys(formats).forEach(function (name) {
-    var col = header.indexOf(name) + 1;
-    if (col > 0) sh.getRange(row, col).setNumberFormat(formats[name]);
-  });
+  return header.map(function (h) { return formats[h] || 'General'; });
 }
 
 /** Accepts 082 123 4567, 0821234567, +27 82 123 4567, 27821234567. Returns 0821234567 or ''. */
@@ -245,12 +242,10 @@ function trySend_(fn, ctx, orderNumber, who) {
   }
 }
 
-function markEmail_(rowIndex, column, value) {
+function markEmail_(rowIndex, header, column, value) {
   try {
-    var sh = sheet_(SHEETS.ORDERS);
-    var header = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h).trim(); });
     var col = header.indexOf(column) + 1;
-    if (col > 0) sh.getRange(rowIndex, col).setValue(value);
+    if (col > 0) sheet_(SHEETS.ORDERS).getRange(rowIndex, col).setValue(value);
   } catch (err) {
     log_('ERROR', 'Could not record email status: ' + (err && err.message));
   }
