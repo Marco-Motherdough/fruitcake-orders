@@ -103,7 +103,7 @@ All values live in the `Settings` sheet so staff can change them without code. V
 - Freeze the header row; format date and money columns.
 
 ### `Settings` tab (key | value)
-`emails_enabled, lead_days, last_order_date, last_pickup_date, daily_capacity, few_left_threshold, max_quantity, closed_dates, closed_weekdays, slots, stores_json, product_name, product_price, shop_phone, baker_emails, alert_email, from_name, reply_to, order_counter`
+`emails_enabled, no_reply, lead_days, last_order_date, last_pickup_date, daily_capacity, few_left_threshold, max_quantity, closed_dates, closed_weekdays, slots, stores_json, product_name, product_price, shop_phone, baker_emails, alert_email, from_name, reply_to, order_counter`
 
 The page reads product, price, stores and slots from the API, so the page and the script share one source of truth.
 
@@ -135,7 +135,7 @@ Deploy as a versioned deployment ("Execute as: Me", "Who has access: Anyone"). U
 
 HTML templates in `/apps-script` with a plain-text fallback, same colours and tone as the page.
 
-- **Customer:** subject "Your Motherdough fruitcake order MD-0412". Includes the order number, pickup date and slot, store address, full order, total, "show this email or your order number at the counter", and a contact line. Reply-to = `reply_to` setting.
+- **Customer:** subject "Your Motherdough fruitcake order MD-0412". Includes the order number, pickup date and slot, store address, full order, total, "show this email or your order number at the counter", and a contact line. Sent as no-reply while `no_reply` = yes (Google Workspace `noReply` option); otherwise reply-to = `reply_to` setting.
 - **Baker:** subject "New fruitcake order MD-0412, pickup Sat 19 Dec". Full order, customer name and cell, notes, total. Recipients = `baker_emails` (**TBD**). Includes the full order so the inbox doubles as a backup.
 - **Later (optional):** reminder email the day before pickup via a daily time-driven trigger.
 

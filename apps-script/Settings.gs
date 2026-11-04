@@ -104,6 +104,7 @@ function parseSettings_(raw) {
     baker_emails: list('baker_emails'),
     alert_email: text('alert_email'),
     emails_enabled: /^(yes|true|on|1)$/i.test(text('emails_enabled')),
+    no_reply: !/^(no|false|off|0)$/i.test(text('no_reply')), // default yes
     from_name: text('from_name') || 'Motherdough',
     reply_to: text('reply_to')
   };
@@ -133,7 +134,6 @@ function parseSettings_(raw) {
   });
 
   if (!s.product_name) problems.push('product_name is empty');
-  if (s.emails_enabled && !s.baker_emails.length) problems.push('baker_emails is empty (needed when emails_enabled is yes)');
   if (s.max_quantity < 1) s.max_quantity = 1;
 
   var slots = jsonVal('slots');

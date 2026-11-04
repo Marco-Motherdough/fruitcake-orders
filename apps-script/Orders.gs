@@ -235,6 +235,7 @@ function trySend_(fn, ctx, orderNumber, who) {
     fn(ctx);
     return 'sent ' + Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm');
   } catch (err) {
+    if (err && err.message === 'SKIP') return 'no recipients';
     log_('ERROR', 'Email to ' + who + ' failed for ' + orderNumber + ': ' + (err && err.message));
     alert_('Email failed for ' + orderNumber,
       'The order was saved but the ' + who + ' email failed:\n\n' + (err && err.message));

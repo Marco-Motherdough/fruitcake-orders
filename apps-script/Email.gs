@@ -20,6 +20,7 @@ function emailData_(ctx) {
     store_address: o.store.address,
     shop_phone: s.shop_phone,
     reply_to: s.reply_to,
+    no_reply: s.no_reply,
     lines: ctx.summary,
     total: o.total === null ? '' : money_(o.total),
     source: o.source
@@ -34,9 +35,11 @@ function renderTemplate_(file, data) {
 
 function sendCustomerEmail_(ctx) {
   var d = emailData_(ctx), s = ctx.settings;
-  var contact = s.reply_to || s.shop_phone
-    ? 'Questions? Reply to this email' + (s.shop_phone ? ' or call us on ' + s.shop_phone : '') + '.'
-    : '';
+  var contact = s.no_reply
+    ? 'This is an automated email, please don\'t reply.' + (s.shop_phone ? ' Questions? Call us on ' + s.shop_phone + '.' : '')
+    : (s.reply_to || s.shop_phone
+      ? 'Questions? Reply to this email' + (s.shop_phone ? ' or call us on ' + s.shop_phone : '') + '.'
+      : '');
   var text = [
     'Hi ' + d.first_name + ',',
     '',
@@ -61,12 +64,14 @@ function sendCustomerEmail_(ctx) {
     htmlBody: renderTemplate_('email_customer', d),
     name: s.from_name
   };
-  if (s.reply_to) options.replyTo = s.reply_to;
+  if (s.no_reply) options.noReply = true; // Google Workspace only: sends from a no-reply address
+  else if (s.reply_to) options.replyTo = s.reply_to;
   MailApp.sendEmail(d.email, 'Your Motherdough fruitcake order ' + d.order_number, text, options);
 }
 
 function sendBakerEmail_(ctx) {
   var d = emailData_(ctx), s = ctx.settings;
+  if (!s.baker_emails.length) throw new Error('SKIP');
   var text = [
     'New fruitcake order ' + d.order_number,
     '',

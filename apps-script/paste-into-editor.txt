@@ -192,6 +192,7 @@ function parseSettings_(raw) {
     baker_emails: list('baker_emails'),
     alert_email: text('alert_email'),
     emails_enabled: /^(yes|true|on|1)$/i.test(text('emails_enabled')),
+    no_reply: !/^(no|false|off|0)$/i.test(text('no_reply')), // default yes
     from_name: text('from_name') || 'Motherdough',
     reply_to: text('reply_to')
   };
@@ -221,7 +222,6 @@ function parseSettings_(raw) {
   });
 
   if (!s.product_name) problems.push('product_name is empty');
-  if (s.emails_enabled && !s.baker_emails.length) problems.push('baker_emails is empty (needed when emails_enabled is yes)');
   if (s.max_quantity < 1) s.max_quantity = 1;
 
   var slots = jsonVal('slots');
@@ -616,6 +616,7 @@ function trySend_(fn, ctx, orderNumber, who) {
     fn(ctx);
     return 'sent ' + Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm');
   } catch (err) {
+    if (err && err.message === 'SKIP') return 'no recipients';
     log_('ERROR', 'Email to ' + who + ' failed for ' + orderNumber + ': ' + (err && err.message));
     alert_('Email failed for ' + orderNumber,
       'The order was saved but the ' + who + ' email failed:\n\n' + (err && err.message));
@@ -703,6 +704,7 @@ function emailData_(ctx) {
     store_address: o.store.address,
     shop_phone: s.shop_phone,
     reply_to: s.reply_to,
+    no_reply: s.no_reply,
     lines: ctx.summary,
     total: o.total === null ? '' : money_(o.total),
     source: o.source
@@ -717,9 +719,11 @@ function renderTemplate_(file, data) {
 
 function sendCustomerEmail_(ctx) {
   var d = emailData_(ctx), s = ctx.settings;
-  var contact = s.reply_to || s.shop_phone
-    ? 'Questions? Reply to this email' + (s.shop_phone ? ' or call us on ' + s.shop_phone : '') + '.'
-    : '';
+  var contact = s.no_reply
+    ? 'This is an automated email, please don\'t reply.' + (s.shop_phone ? ' Questions? Call us on ' + s.shop_phone + '.' : '')
+    : (s.reply_to || s.shop_phone
+      ? 'Questions? Reply to this email' + (s.shop_phone ? ' or call us on ' + s.shop_phone : '') + '.'
+      : '');
   var text = [
     'Hi ' + d.first_name + ',',
     '',
@@ -744,12 +748,14 @@ function sendCustomerEmail_(ctx) {
     htmlBody: renderTemplate_('email_customer', d),
     name: s.from_name
   };
-  if (s.reply_to) options.replyTo = s.reply_to;
+  if (s.no_reply) options.noReply = true; // Google Workspace only: sends from a no-reply address
+  else if (s.reply_to) options.replyTo = s.reply_to;
   MailApp.sendEmail(d.email, 'Your Motherdough fruitcake order ' + d.order_number, text, options);
 }
 
 function sendBakerEmail_(ctx) {
   var d = emailData_(ctx), s = ctx.settings;
+  if (!s.baker_emails.length) throw new Error('SKIP');
   var text = [
     'New fruitcake order ' + d.order_number,
     '',
@@ -803,6 +809,7 @@ var SETTINGS_DEFAULTS = [
   ['product_price', '', 'TBD. Price per cake in rand, e.g. 350. Blank = no price shown.'],
   ['shop_phone', '', 'TBD. Shown to customers if something goes wrong.'],
   ['emails_enabled', 'no', 'yes = send customer and baker emails. Leave no until emails are set up.'],
+  ['no_reply', 'yes', 'yes = customer emails come from a no-reply address (Google Workspace only). no = from this account, with reply_to.'],
   ['baker_emails', '', 'TBD. Comma-separated addresses that get the new-order email.'],
   ['alert_email', '', 'Gets error alerts. Blank = the script owner account.'],
   ['from_name', 'Motherdough', 'Sender name on emails.'],
