@@ -74,7 +74,7 @@ function placeOrder_(body) {
       pickup_slot: o.slot.label + ' ' + o.slot.start + '–' + o.slot.end,
       store: o.store.name,
       name: cellText_(o.name),
-      cell: cellText_(o.cell),
+      cell: "'" + o.cell, // keep the leading 0
       email: cellText_(o.email),
       product: s.product_name,
       quantity: o.quantity,
@@ -87,6 +87,7 @@ function placeOrder_(body) {
     };
     sh.appendRow(header.map(function (h) { return record.hasOwnProperty(h) ? record[h] : ''; }));
     rowIndex = sh.getLastRow();
+    formatOrderRow_(sh, header, rowIndex);
     SpreadsheetApp.flush();
   } finally {
     lock.releaseLock();
@@ -176,6 +177,20 @@ function validateOrder_(b, s) {
       name: name, cell: cell, email: email, notes: notes, source: source
     }
   };
+}
+
+/** Date, money and text formats for one Orders row (new rows don't always inherit column formats). */
+function formatOrderRow_(sh, header, row) {
+  var formats = {
+    created_at: 'yyyy-mm-dd hh:mm',
+    pickup_date: 'ddd yyyy-mm-dd',
+    cell: '@',
+    total: '"R"#,##0'
+  };
+  Object.keys(formats).forEach(function (name) {
+    var col = header.indexOf(name) + 1;
+    if (col > 0) sh.getRange(row, col).setNumberFormat(formats[name]);
+  });
 }
 
 /** Accepts 082 123 4567, 0821234567, +27 82 123 4567, 27821234567. Returns 0821234567 or ''. */
