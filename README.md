@@ -27,7 +27,7 @@ Fill these in before launch. Most go in the **Settings** tab of the sheet, so th
 | Shop phone number | Settings `shop_phone` **and** `SHOP_PHONE` in `web/app.js` (used when the API can't be reached) |
 | Reply-to and alert email | Settings `reply_to`, `alert_email` |
 | Owner Google account | e.g. `orders@motherdough.co.za`, which must be Google Workspace |
-| Subdomain and who manages DNS | `web/CNAME` is set to `order.motherdough.co.za` |
+| Subdomain and who manages DNS | `web/CNAME` is set to `orders.motherdough.co.za` |
 | Logo file and fruitcake photo | `web/assets/`. Swap the placeholders marked `TBD` in `web/index.html` |
 | Data retention period after the season | POPIA, see CLAUDE.md |
 
@@ -88,14 +88,14 @@ Quick check: open `<web app URL>?action=config` in a browser. You should see JSO
 ## 5. Publish the page
 
 1. Repo **Settings > Pages > Source: GitHub Actions**. The workflow in `.github/workflows/pages.yml` publishes `web/` on every push to `main` that touches it.
-2. Custom domain: `order.motherdough.co.za` (already in `web/CNAME`). Tick **Enforce HTTPS** once the certificate is issued.
-3. At the DNS host, add `CNAME order → <github-user-or-org>.github.io`.
+2. Custom domain: `orders.motherdough.co.za` (already in `web/CNAME`). Tick **Enforce HTTPS** once the certificate is issued.
+3. At the DNS host, add `CNAME orders → <github-user-or-org>.github.io`.
 
 ## 6. Test, then print QR codes
 
 Work through the "Testing before launch" checklist in `CLAUDE.md`. To fill a date quickly, set its row in the **Capacity** tab to a small number.
 
-Only after the live page is tested, generate QR codes for `https://order.motherdough.co.za/?src=counter`. Use a different `src` for each placement (`src=window`, `src=till`, and so on). The value lands in the `source` column.
+Only after the live page is tested, generate QR codes for `https://orders.motherdough.co.za/?src=counter`. Use a different `src` for each placement (`src=window`, `src=till`, and so on). The value lands in the `source` column.
 
 ## How it works
 

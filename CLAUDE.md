@@ -10,7 +10,7 @@ Items marked **TBD** are still waiting on the business. Do not invent values for
 
 | Part | Where | Notes |
 |---|---|---|
-| Order page (4 screens) | GitHub Pages, custom domain `order.motherdough.co.za` (**TBD**: confirm subdomain) | Static HTML/CSS/vanilla JS, no framework, no build step |
+| Order page (4 screens) | GitHub Pages, custom domain `orders.motherdough.co.za` (**TBD**: confirm subdomain) | Static HTML/CSS/vanilla JS, no framework, no build step |
 | Logic / API | Google Apps Script web app | Executes as the owner account, access "Anyone" |
 | Data | Google Sheet (tabs: `Orders`, `Settings`, `Log`) | Owned by the shared business account |
 | Email | `MailApp` (send-only permission) | Sent from the owner account |
@@ -176,8 +176,8 @@ Gmail limits: about 1,500 recipients a day on Google Workspace, about 100 on fre
 
 1. Create the Sheet (owner account) with the tabs above and fill Settings.
 2. Create the bound Apps Script project; `clasp clone`/`clasp push` from `/apps-script`; deploy the web app; put the web app URL in `/web/app.js` config.
-3. Enable GitHub Pages from `/web` (GitHub Actions or branch folder); add `CNAME` for `order.motherdough.co.za`; add the DNS CNAME record at the domain host (**TBD**: who manages DNS).
-4. Generate the QR code for `https://order.motherdough.co.za/?src=counter` (and other `src` values per placement) only after the page is live and tested.
+3. Enable GitHub Pages from `/web` (GitHub Actions or branch folder); add `CNAME` for `orders.motherdough.co.za`; add the DNS CNAME record at the domain host (**TBD**: who manages DNS).
+4. Generate the QR code for `https://orders.motherdough.co.za/?src=counter` (and other `src` values per placement) only after the page is live and tested.
 
 ## Later (not v1)
 

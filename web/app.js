@@ -575,7 +575,7 @@
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       'BEGIN:VEVENT',
-      'UID:' + r.order_number + '-' + r.pickup_date + '@order.motherdough.co.za',
+      'UID:' + r.order_number + '-' + r.pickup_date + '@orders.motherdough.co.za',
       'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''),
       'DTSTART:' + icsUtc(r.pickup_date, r.slot.start),
       'DTEND:' + icsUtc(r.pickup_date, r.slot.end),
