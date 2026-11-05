@@ -1,29 +1,30 @@
 @page { margin: 0; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { background: #fff; }
-body { font-family: 'Poppins', Arial, sans-serif; color: #4C3329; letter-spacing: 0.3px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.face { width: 148mm; height: 210mm; padding: 11mm 12mm 9mm; display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden; background: #fff; }
+html, body { background: #2F302E; }
+body { font-family: 'Poppins', Arial, sans-serif; color: #EFE7DC; letter-spacing: 0.3px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.face { width: 148mm; height: 210mm; padding: 11mm 12mm 9mm; display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden; background: #2F302E; }
 .logo { width: 24mm; height: auto; }
-.kicker { margin-top: 4mm; font-size: 7.5pt; font-weight: 500; letter-spacing: 2.2pt; color: #8A6331; }
+.kicker { margin-top: 4mm; font-size: 7.5pt; font-weight: 500; letter-spacing: 2.2pt; color: #C9A46A; }
 h1 { margin-top: 5mm; font-weight: 400; font-size: 27pt; line-height: 1.12; color: #AE8344; letter-spacing: 0.2pt; }
 .lede { margin-top: 3.5mm; font-size: 9.5pt; line-height: 1.5; max-width: 98mm; }
-.photo { margin-top: 6mm; width: 148mm; max-width: none; height: 54mm; object-fit: cover; object-position: 50% 46%; display: block; }
-.order { margin-top: 7mm; display: flex; align-items: center; gap: 7mm; text-align: left; width: 100%; padding: 0 3mm; }
-.qr { width: 40mm; height: 40mm; flex: none; }
+.photo { margin-top: 2mm; width: 148mm; max-width: none; height: 58mm; object-fit: cover; object-position: 50% 30%; display: block;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 9%, #000 82%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 9%, #000 82%, transparent 100%); }
+.order { margin-top: 2mm; display: flex; align-items: center; gap: 7mm; text-align: left; width: 100%; padding: 0 3mm; }
+.qr { width: 38mm; height: 38mm; flex: none; display: block; }
 .info { flex: 1; }
-.label { font-size: 8pt; font-weight: 600; letter-spacing: 2.2pt; color: #8A6331; }
+.label { font-size: 8pt; font-weight: 600; letter-spacing: 2.2pt; color: #C9A46A; }
 .how { margin-top: 1.5mm; font-size: 9.5pt; line-height: 1.45; }
-dl { margin-top: 3.5mm; border-top: 0.3mm solid #EFE7DC; }
-dl div { display: flex; justify-content: space-between; padding: 1.6mm 0; border-bottom: 0.3mm solid #EFE7DC; font-size: 9pt; }
-dt { color: #7A655A; }
+dl { margin-top: 3.5mm; border-top: 0.3mm solid rgba(239,231,220,0.22); }
+dl div { display: flex; justify-content: space-between; padding: 1.6mm 0; border-bottom: 0.3mm solid rgba(239,231,220,0.22); font-size: 9pt; }
+dt { color: #B8AA9C; }
 dd { font-weight: 500; }
-.stores { margin-top: auto; font-size: 7pt; letter-spacing: 2pt; color: #8A6331; font-weight: 500; }
-.url { margin-top: 1.5mm; font-size: 8pt; color: #7A655A; }
+.stores { margin-top: auto; font-size: 7pt; letter-spacing: 2pt; color: #C9A46A; font-weight: 500; }
+.url { margin-top: 1.5mm; font-size: 8pt; color: #B8AA9C; }
 /* A4 tent card: two faces, the top one upside down so both stand upright after folding */
-.sheet { width: 210mm; height: 297mm; position: relative; page-break-after: always; }
+.sheet { width: 210mm; height: 297mm; position: relative; page-break-after: always; background: #2F302E; }
 .sheet .slot { position: absolute; left: 31mm; width: 148mm; height: 148.5mm; overflow: hidden; display: flex; justify-content: center; }
 .sheet .slot.top { top: 0; transform: rotate(180deg); }
 .sheet .slot.bottom { top: 148.5mm; }
 .sheet .slot .face { transform: scale(0.7071); transform-origin: top center; }
-.fold { position: absolute; left: 0; right: 0; top: 148.5mm; border-top: 0.2mm dashed #C9B8A6; }
+.fold { position: absolute; left: 0; right: 0; top: 148.5mm; border-top: 0.2mm dashed #6B6A66; }
 .foldlabel { position: absolute; right: 4mm; top: 149.5mm; font-size: 6pt; color: #A8978B; letter-spacing: 1pt; }
