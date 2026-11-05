@@ -88,6 +88,8 @@ function buildConfig_() {
     slots: s.slots,
     stores: s.stores,
     shop_phone: s.shop_phone,
+    contact_email: s.contact_email,
+    first_pickup_date: s.first_pickup_date,
     availability: open ? availability : []
   };
 }

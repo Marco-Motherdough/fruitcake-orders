@@ -46,7 +46,7 @@ function capacityOverrides_() {
  */
 function computeAvailability_(s, booked, overrides, today) {
   var out = [];
-  var start = addDaysIso_(today, s.lead_days);
+  var start = earliestPickup_(s, today);
   for (var d = start; d <= s.last_pickup_date; d = addDaysIso_(d, 1)) {
     var max = Object.prototype.hasOwnProperty.call(overrides, d) ? overrides[d] : s.daily_capacity;
     var closed = max <= 0 ||

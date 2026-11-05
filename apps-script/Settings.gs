@@ -101,6 +101,8 @@ function parseSettings_(raw) {
     product_name: text('product_name'),
     product_price: null, // null = price not set yet; totals are hidden
     shop_phone: text('shop_phone'),
+    contact_email: text('contact_email'),
+    first_pickup_date: '',
     baker_emails: list('baker_emails'),
     alert_email: text('alert_email'),
     emails_enabled: /^(yes|true|on|1)$/i.test(text('emails_enabled')),
@@ -116,6 +118,8 @@ function parseSettings_(raw) {
     if (!isFinite(price) || price < 0) problems.push('product_price must be a number, e.g. 350');
     else s.product_price = price;
   }
+
+  if (text('first_pickup_date') || raw.first_pickup_date instanceof Date) s.first_pickup_date = date('first_pickup_date');
 
   // closed_dates may be a single date cell or a comma-separated list.
   if (raw.closed_dates instanceof Date) {
@@ -173,6 +177,12 @@ function nextOrderNumber_() {
 }
 
 /* ---------- Dates (all as yyyy-MM-dd strings in Johannesburg time) ---------- */
+
+/** Earliest bookable pickup: today + lead_days, but never before first_pickup_date. */
+function earliestPickup_(s, today) {
+  var byLead = addDaysIso_(today || todayIso_(), s.lead_days);
+  return s.first_pickup_date && s.first_pickup_date > byLead ? s.first_pickup_date : byLead;
+}
 
 function todayIso_() {
   return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');

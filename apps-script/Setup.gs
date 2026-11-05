@@ -8,6 +8,7 @@ var SETTINGS_DEFAULTS = [
   // key, placeholder value, note for staff. '' = TBD, must be filled before launch.
   ['lead_days', 14, 'Earliest pickup = today + this many days (Johannesburg time).'],
   ['last_order_date', '2026-12-10', 'TBD confirm. Last day orders are accepted (yyyy-mm-dd).'],
+  ['first_pickup_date', '', 'Optional. No pickups before this date (yyyy-mm-dd), even if the lead time allows.'],
   ['last_pickup_date', '2026-12-24', 'TBD confirm. Last pickup date (yyyy-mm-dd).'],
   ['daily_capacity', '', 'TBD. Max cakes (not orders) per pickup date. Per-date overrides go in the Capacity tab.'],
   ['few_left_threshold', 3, 'Show the "few left" dot when this many or fewer cakes remain.'],
@@ -24,7 +25,8 @@ var SETTINGS_DEFAULTS = [
   ]), 'Collection stores (JSON). TBD: store addresses.'],
   ['product_name', 'Rich Dark Fruitcake 700g', 'The cake customers order.'],
   ['product_price', '', 'TBD. Price per cake in rand, e.g. 350. Blank = no price shown.'],
-  ['shop_phone', '', 'TBD. Shown to customers if something goes wrong.'],
+  ['shop_phone', '', 'Optional. Shown to customers if set.'],
+  ['contact_email', '', 'TBD. Address customers are told to email with questions.'],
   ['emails_enabled', 'no', 'yes = send customer and baker emails. Leave no until emails are set up.'],
   ['no_reply', 'yes', 'yes = customer emails come from a no-reply address (Google Workspace only). no = from this account, with reply_to.'],
   ['baker_emails', '', 'TBD. Comma-separated addresses that get the new-order email.'],

@@ -143,7 +143,7 @@ function validateOrder_(b, s) {
 
   var pickup = toIso_(b.pickup_date);
   if (!pickup) return bad('pickup_date', 'Please choose a pickup date.', 'invalid pickup date');
-  var earliest = addDaysIso_(todayIso_(), s.lead_days);
+  var earliest = earliestPickup_(s);
   if (pickup < earliest || pickup > s.last_pickup_date) {
     return bad('pickup_date', 'Please choose a pickup date between ' + shortDate_(earliest) +
       ' and ' + shortDate_(s.last_pickup_date) + '.', 'pickup date outside window: ' + pickup);

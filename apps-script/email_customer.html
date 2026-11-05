@@ -49,10 +49,8 @@
 
   <tr><td style="padding:20px 0;border-top:1px solid #EFE7DC;">
     <p style="margin:0;">Show this email or your order number at the counter when you collect.</p>
-    <? if (d.no_reply) { ?>
-    <p style="margin:12px 0 0;color:#7A655A;">This is an automated email, please don’t reply.<? if (d.shop_phone) { ?> Questions? Call us on <?= d.shop_phone ?>.<? } ?></p>
-    <? } else if (d.reply_to || d.shop_phone) { ?>
-    <p style="margin:12px 0 0;color:#7A655A;">Questions? Reply to this email<? if (d.shop_phone) { ?> or call us on <?= d.shop_phone ?><? } ?>.</p>
+    <? if (d.contact) { ?>
+    <p style="margin:12px 0 0;color:#7A655A;"><?= d.contact ?></p>
     <? } ?>
   </td></tr>
 

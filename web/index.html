@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -38,7 +38,7 @@
 
       <section id="state-error" class="state" hidden>
         <h1 class="heading" tabindex="-1">We can’t load the order form right now</h1>
-        <p>Please try again in a few minutes<span class="js-phone-sentence">, or call the shop on <a class="js-phone-link" href="#"></a> to order</span>.</p>
+        <p>Please try again in a few minutes<span id="error-contact"></span>.</p>
         <button type="button" class="btn btn-secondary" id="retry">Try again</button>
       </section>
 
@@ -52,7 +52,7 @@
       <section id="step-1" class="step" hidden aria-labelledby="h-step-1">
         <figure class="hero">
           <!-- Temporary image; replace assets/fruitcake.jpg with the final photo (1170 x 780, 3:2). -->
-          <img src="assets/fruitcake.jpg?v=1" alt="Motherdough Rich Dark Fruitcake" width="1170" height="780" fetchpriority="high">
+          <img src="assets/fruitcake.jpg?v=2" alt="Motherdough Rich Dark Fruitcake" width="1170" height="780" fetchpriority="high">
         </figure>
 
         <h1 class="heading" id="h-step-1" tabindex="-1">Rich Dark Fruitcake</h1>
@@ -221,6 +221,6 @@
     </main>
   </div>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

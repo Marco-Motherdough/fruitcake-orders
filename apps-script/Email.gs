@@ -19,12 +19,25 @@ function emailData_(ctx) {
     store_name: o.store.name,
     store_address: o.store.address,
     shop_phone: s.shop_phone,
+    contact_email: s.contact_email,
+    contact: contactLine_(s),
     reply_to: s.reply_to,
     no_reply: s.no_reply,
     lines: ctx.summary,
     total: o.total === null ? '' : money_(o.total),
     source: o.source
   };
+}
+
+/** The contact sentence at the bottom of the customer email. */
+function contactLine_(s) {
+  var ways = [];
+  if (s.contact_email) ways.push('email us at ' + s.contact_email);
+  if (s.shop_phone) ways.push('call us on ' + s.shop_phone);
+  var ask = ways.length ? 'Questions? ' + ways.join(' or ').replace(/^./, function (c) { return c.toUpperCase(); }) + '.' : '';
+  if (s.no_reply) return ('This is an automated email, please don\'t reply. ' + ask).trim();
+  if (s.reply_to) return 'Questions? Reply to this email' + (ways.length ? ' or ' + ways.join(' or ') : '') + '.';
+  return ask;
 }
 
 function renderTemplate_(file, data) {
@@ -35,11 +48,7 @@ function renderTemplate_(file, data) {
 
 function sendCustomerEmail_(ctx) {
   var d = emailData_(ctx), s = ctx.settings;
-  var contact = s.no_reply
-    ? 'This is an automated email, please don\'t reply.' + (s.shop_phone ? ' Questions? Call us on ' + s.shop_phone + '.' : '')
-    : (s.reply_to || s.shop_phone
-      ? 'Questions? Reply to this email' + (s.shop_phone ? ' or call us on ' + s.shop_phone : '') + '.'
-      : '');
+  var contact = d.contact;
   var text = [
     'Hi ' + d.first_name + ',',
     '',

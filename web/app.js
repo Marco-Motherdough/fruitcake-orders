@@ -5,8 +5,9 @@
   var CONFIG = {
     // Apps Script web app URL (Deploy > Manage deployments). Stays the same across new versions.
     API_URL: 'https://script.google.com/macros/s/AKfycbx6IzIM80uFVI_BOEOsq09xjYxFARJAM1SCMC4KeM_Jhx2OrWGX0_FhOQY1UeRMtJCZ_g/exec',
-    // TBD: shop phone number, shown if the order system cannot be reached.
+    // Shown if the order system cannot be reached (the sheet's values are used once loaded).
     SHOP_PHONE: '',
+    CONTACT_EMAIL: '', // TBD: address customers can email with questions
     REQUEST_TIMEOUT_MS: 20000
   };
 
@@ -69,6 +70,14 @@
   }
 
   function phone() { return (state.config && state.config.shop_phone) || CONFIG.SHOP_PHONE; }
+  function contactEmail() { return (state.config && state.config.contact_email) || CONFIG.CONTACT_EMAIL; }
+
+  /** ", or email us at x" / ", or call us on x" / "" */
+  function contactText() {
+    if (contactEmail()) return ', or email us at ' + contactEmail();
+    if (phone()) return ', or call us on ' + phone();
+    return '';
+  }
 
   /* ---------- Preview mode (until the Apps Script URL is set) ---------- */
 
@@ -204,12 +213,15 @@
       state.step = 0;
     }
     if (which === 'error') {
-      var p = phone();
-      document.querySelectorAll('.js-phone-sentence').forEach(function (n) { n.hidden = !p; });
-      document.querySelectorAll('.js-phone-link').forEach(function (a) {
-        a.textContent = p;
-        a.href = 'tel:' + p.replace(/[^\d+]/g, '');
-      });
+      var box = $('error-contact');
+      box.textContent = '';
+      if (contactEmail()) {
+        box.appendChild(document.createTextNode(', or email us at '));
+        box.appendChild(el('a', { href: 'mailto:' + contactEmail(), text: contactEmail() }));
+      } else if (phone()) {
+        box.appendChild(document.createTextNode(', or call us on '));
+        box.appendChild(el('a', { href: 'tel:' + phone().replace(/[^\d+]/g, ''), text: phone() }));
+      }
     }
     var h = which && $('state-' + which).querySelector('.heading');
     if (h) h.focus();
@@ -516,13 +528,13 @@
         var fid = fieldIdFor(res.field);
         if (fid) $(fid).setAttribute('aria-invalid', 'true');
       }
-      if (code === 'server_error' && phone()) msg += ' Please try again, or call us on ' + phone() + '.';
+      if (code === 'server_error' && contactText()) msg += ' Please try again' + contactText() + '.';
       showSubmitError(msg);
     }).catch(function () {
       setSubmitting(false);
       showSubmitError('We could not reach our order system, so we can’t be sure your order went through. ' +
         'Please check your email for a confirmation before trying again' +
-        (phone() ? ', or call us on ' + phone() : '') + '.');
+        contactText() + '.');
     });
   }
 

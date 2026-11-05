@@ -78,16 +78,16 @@ Look: matches motherdough.co.za, editorial and calm, NOT an app template. No rou
 
 All values live in the `Settings` sheet so staff can change them without code. Values shown are the design placeholders.
 
-- **Lead time:** earliest pickup = today + 14 days (Africa/Johannesburg time). Setting `lead_days` = 14.
-- **Order cut-off:** last order date 10 December (`last_order_date`, **TBD** confirm). After it, the page shows "Orders for Christmas 2026 are closed" and the API rejects orders.
-- **Last pickup date:** 24 December (`last_pickup_date`, **TBD** confirm).
-- **Daily capacity:** max cakes per pickup date (`daily_capacity`, **TBD**). Count by quantity, not by order. Optional per-date overrides in a `Capacity` tab (date, max).
-- **Closed days:** list of dates and/or weekdays (`closed_dates`, `closed_weekdays`, **TBD**).
+- **Lead time:** earliest pickup = today + 14 days (Africa/Johannesburg time), and never before `first_pickup_date` (1 Dec). Setting `lead_days` = 14.
+- **Order cut-off:** last order date 10 December (`last_order_date`, confirmed by the chef). After it, the page shows "Orders for Christmas 2026 are closed" and the API rejects orders.
+- **Last pickup date:** 24 December (`last_pickup_date`, confirmed).
+- **Daily capacity:** 20 cakes per pickup date across all stores (`daily_capacity`). Count by quantity, not by order. Optional per-date overrides in a `Capacity` tab (date, max).
+- **Closed days:** none (any day is fine); `closed_dates`, `closed_weekdays` available if needed.
 - **"Few left":** show the dot when remaining for that date is at or below `few_left_threshold` (default 3).
 - **Collection window:** 8am–4pm, from the paper order sheet (`docs/`). Stored in `slots` as one entry.
 - **Stores:** Franschhoek (FHK), Jonkershoek (JHK), Stellenbosch (STB) (`stores_json`; **TBD**: addresses). Capacity is shared across all stores (**TBD**: confirm, or make it per store).
-- **Product:** Rich Dark Fruitcake 700g (`product_name`). Price `product_price` is **TBD**; while blank, no price or total is shown anywhere.
-- **Quantity:** 1 to `max_quantity` (default 5).
+- **Product:** Rich Dark Fruitcake 700g (`product_name`). Price `product_price` is a temporary R350 (**TBD**: final price); while blank, no price or total is shown anywhere.
+- **Quantity:** 1 to `max_quantity` (20, same as the daily limit).
 - **Total is always calculated by the script**, never trusted from the page.
 
 ---
@@ -136,7 +136,7 @@ Deploy as a versioned deployment ("Execute as: Me", "Who has access: Anyone"). U
 HTML templates in `/apps-script` with a plain-text fallback, same colours and tone as the page.
 
 - **Customer:** subject "Your Motherdough fruitcake order MD-0412". Includes the order number, pickup date and slot, store address, full order, total, "show this email or your order number at the counter", and a contact line. Sent as no-reply while `no_reply` = yes (Google Workspace `noReply` option); otherwise reply-to = `reply_to` setting.
-- **Baker:** subject "New fruitcake order MD-0412, pickup Sat 19 Dec". Full order, customer name and cell, notes, total. Recipients = `baker_emails` (**TBD**). Includes the full order so the inbox doubles as a backup.
+- **Baker:** subject "New fruitcake order MD-0412, pickup Sat 19 Dec". Full order, customer name and cell, notes, total. Recipients = `baker_emails`. **TBD before launch:** change from marco@ to lianti@motherdough.co.za (and add her to `staff_emails`). Includes the full order so the inbox doubles as a backup.
 - **Later (optional):** reminder email the day before pickup via a daily time-driven trigger.
 
 Gmail limits: about 1,500 recipients a day on Google Workspace, about 100 on free Gmail. Use a Workspace account.
@@ -145,7 +145,7 @@ Gmail limits: about 1,500 recipients a day on Google Workspace, about 100 on fre
 
 ## Page behaviour details
 
-- Show a loading state while fetching config. If the API fails, show a friendly message with the shop phone number (**TBD**).
+- Step 1 shows immediately; config loads in the background. If the API fails, show a friendly message with `contact_email` (**TBD**; no shop phone is given to customers).
 - Disable the PLACE ORDER button and show "Placing your order…" while submitting. Apps Script can take 1–3 seconds.
 - Keep the selections in memory while moving between steps; if a chosen date becomes full on submit, return to step 2 with a message.
 - Hidden honeypot input on step 3.
