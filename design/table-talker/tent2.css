@@ -1,0 +1,24 @@
+@page { margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #2F302E; }
+body { font-family: 'Poppins', Arial, sans-serif; color: #EFE7DC; letter-spacing: 0.3px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.tf { position: relative; width: 210mm; height: 148.5mm; background: #2F302E; overflow: hidden; }
+.tf-photo { position: absolute; left: -16mm; top: 26mm; width: 138mm; height: 92mm; object-fit: cover;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%); mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%); }
+.tf-text { position: absolute; left: 112mm; right: 10mm; top: 10mm; bottom: 9mm; display: flex; flex-direction: column; }
+.tf-logo { width: 17mm; height: auto; }
+.tf-kicker { margin-top: 3mm; font-size: 6.5pt; font-weight: 500; letter-spacing: 1.8pt; color: #C9A46A; }
+h1 { margin-top: 3mm; font-weight: 400; font-size: 20pt; line-height: 1.1; color: #AE8344; }
+.tf-lede { margin-top: 2.5mm; font-size: 8.5pt; line-height: 1.5; }
+.tf-order { margin-top: auto; display: flex; gap: 5mm; align-items: center; }
+.tf-qr { width: 33mm; height: 33mm; flex: none; display: block; }
+.tf-label { font-size: 7.5pt; font-weight: 600; letter-spacing: 2pt; color: #C9A46A; }
+dl { margin-top: 2.5mm; border-top: 0.3mm solid rgba(239,231,220,0.22); width: 42mm; }
+dl div { display: flex; justify-content: space-between; padding: 1.3mm 0; border-bottom: 0.3mm solid rgba(239,231,220,0.22); font-size: 8pt; }
+dt { color: #B8AA9C; } dd { font-weight: 500; }
+.tf-stores { margin-top: 4mm; font-size: 6pt; letter-spacing: 1.6pt; color: #C9A46A; font-weight: 500; }
+.sheet { width: 210mm; height: 297mm; position: relative; background: #2F302E; }
+.half { position: absolute; left: 0; width: 210mm; height: 148.5mm; }
+.half.top { top: 0; transform: rotate(180deg); }
+.half.bottom { top: 148.5mm; }
+.fold { position: absolute; left: 0; right: 0; top: 148.5mm; border-top: 0.2mm dashed #6B6A66; }
