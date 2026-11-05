@@ -90,6 +90,7 @@ main:focus { box-shadow: none; }
   min-height: 44px;
   justify-content: center;
 }
+.logo img { display: block; width: 110px; height: auto; }
 .logo-word {
   font-family: var(--logo-font);
   font-weight: 600;

@@ -65,7 +65,7 @@ Look: matches motherdough.co.za, editorial and calm, NOT an app template. No rou
 | Disabled | `#A8978B` | Full or unavailable dates |
 
 - Font: Poppins 400/500/600 (Google Fonts). Body letter-spacing ~0.3px.
-- Logo: use the real logo file when supplied (**TBD**). Until then, "MOTHERDOUGH" in Josefin Sans 600, caramel, with "1919" beneath.
+- Logo: `web/assets/logo.png` (caramel, transparent), 110px wide in the header. Source file in `design/`.
 - Buttons: square (radius 2px), min height 50px, uppercase, letter-spacing 2px, 12px. Primary = brown fill, white text. Secondary = 1px brown outline.
 - Store and time-slot choices = list rows with native radio/checkbox, thin rule between rows.
 - Full-width fruitcake photo at top of step 1 (**TBD**: photo).
@@ -137,7 +137,8 @@ HTML templates in `/apps-script` with a plain-text fallback, same colours and to
 
 - **Customer:** subject "Your Motherdough fruitcake order MD-0412". Includes the order number, pickup date and slot, store address, full order, total, "show this email or your order number at the counter", and a contact line. Sent as no-reply while `no_reply` = yes (Google Workspace `noReply` option); otherwise reply-to = `reply_to` setting.
 - **Baker:** subject "New fruitcake order MD-0412, pickup Sat 19 Dec". Full order, customer name and cell, notes, total. Recipients = `baker_emails`. **TBD before launch:** change from marco@ to lianti@motherdough.co.za (and add her to `staff_emails`). Includes the full order so the inbox doubles as a backup.
-- **Later (optional):** reminder email the day before pickup via a daily time-driven trigger.
+- **Reminder (built):** `sendReminders()` (Reminders.gs) runs from a daily trigger and emails customers collecting tomorrow, once (`reminder_sent` column). Off when `reminders_enabled` = no. Reuses `email_customer.html` with `d.reminder`.
+- Customer emails show the logo from the `logo_url` setting (`web/assets/logo-email.png`).
 
 Gmail limits: about 1,500 recipients a day on Google Workspace, about 100 on free Gmail. Use a Workspace account.
 
@@ -182,7 +183,6 @@ Gmail limits: about 1,500 recipients a day on Google Workspace, about 100 on fre
 ## Later (not v1)
 
 - **Payments:** Yoco Checkout API (Motherdough already uses Yoco in store) or Shopify checkout. Would add `pending_payment` status, a checkout redirect, and a verified payment webhook before emails send. Note: Apps Script cannot read webhook signature headers, so payment confirmation may need a small serverless function or to be handled through Shopify. Decide before building.
-- Day-before reminder emails.
 - Baker app (built): staff-only page served by the same script (`Baker.gs`, `baker.html`) on a second deployment with access "Anyone within Motherdough". Only `staff_emails` get in. Stages come from `baker_stages`; the `status` column holds the stage and `status_updated` records who changed it and when.
 
 ## Notes for changes

@@ -21,6 +21,8 @@ function emailData_(ctx) {
     shop_phone: s.shop_phone,
     contact_email: s.contact_email,
     contact: contactLine_(s),
+    logo_url: s.logo_url,
+    reminder: !!ctx.reminder,
     reply_to: s.reply_to,
     no_reply: s.no_reply,
     lines: ctx.summary,
@@ -52,7 +54,8 @@ function sendCustomerEmail_(ctx) {
   var text = [
     'Hi ' + d.first_name + ',',
     '',
-    'Thank you for your Motherdough Christmas fruitcake order.',
+    d.reminder ? 'A reminder that you\'re collecting your Motherdough fruitcake tomorrow.'
+      : 'Thank you for your Motherdough Christmas fruitcake order.',
     '',
     'Order number: ' + d.order_number,
     'Pickup: ' + d.pickup_long + ', ' + d.slot_label + ' ' + d.slot_time,
@@ -75,7 +78,10 @@ function sendCustomerEmail_(ctx) {
   };
   if (s.no_reply) options.noReply = true; // Google Workspace only: sends from a no-reply address
   else if (s.reply_to) options.replyTo = s.reply_to;
-  MailApp.sendEmail(d.email, 'Your Motherdough fruitcake order ' + d.order_number, text, options);
+  var subject = d.reminder
+    ? 'Reminder: collect your Motherdough fruitcake tomorrow (' + d.order_number + ')'
+    : 'Your Motherdough fruitcake order ' + d.order_number;
+  MailApp.sendEmail(d.email, subject, text, options);
 }
 
 function sendBakerEmail_(ctx) {

@@ -28,6 +28,8 @@ var SETTINGS_DEFAULTS = [
   ['shop_phone', '', 'Optional. Shown to customers if set.'],
   ['contact_email', '', 'TBD. Address customers are told to email with questions.'],
   ['emails_enabled', 'no', 'yes = send customer and baker emails. Leave no until emails are set up.'],
+  ['reminders_enabled', 'yes', 'yes = email customers the day before they collect (needs the daily sendReminders trigger).'],
+  ['logo_url', 'https://marco-motherdough.github.io/fruitcake-orders/assets/logo-email.png', 'Logo shown at the top of customer emails. Blank = text logo.'],
   ['no_reply', 'yes', 'yes = customer emails come from a no-reply address (Google Workspace only). no = from this account, with reply_to.'],
   ['baker_emails', '', 'TBD. Comma-separated addresses that get the new-order email.'],
   ['alert_email', '', 'Gets error alerts. Blank = the script owner account.'],

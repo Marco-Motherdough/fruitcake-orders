@@ -14,7 +14,7 @@ var SHEETS = {
 
 var ORDER_COLUMNS = [
   'order_number', 'created_at', 'status', 'pickup_date', 'pickup_slot', 'store',
-  'name', 'cell', 'email', 'product', 'quantity', 'notes', 'total', 'consent', 'source', 'email_customer_sent', 'email_baker_sent', 'status_updated'
+  'name', 'cell', 'email', 'product', 'quantity', 'notes', 'total', 'consent', 'source', 'email_customer_sent', 'email_baker_sent', 'status_updated', 'reminder_sent'
 ];
 
 var WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -106,6 +106,8 @@ function parseSettings_(raw) {
     baker_emails: list('baker_emails'),
     alert_email: text('alert_email'),
     emails_enabled: /^(yes|true|on|1)$/i.test(text('emails_enabled')),
+    reminders_enabled: /^(yes|true|on|1)$/i.test(text('reminders_enabled')),
+    logo_url: text('logo_url'),
     no_reply: !/^(no|false|off|0)$/i.test(text('no_reply')), // default yes
     from_name: text('from_name') || 'Motherdough',
     reply_to: text('reply_to'),
