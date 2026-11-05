@@ -145,7 +145,7 @@ Gmail limits: about 1,500 recipients a day on Google Workspace, about 100 on fre
 
 ## Page behaviour details
 
-- Step 1 shows immediately; config loads in the background. If the API fails, show a friendly message with `contact_email` (**TBD**; no shop phone is given to customers).
+- Step 1 shows immediately; config loads in the background. If the API fails, show a friendly message (no contact details are given to customers for now; `contact_email` and `shop_phone` stay blank).
 - Disable the PLACE ORDER button and show "Placing your order…" while submitting. Apps Script can take 1–3 seconds.
 - Keep the selections in memory while moving between steps; if a chosen date becomes full on submit, return to step 2 with a message.
 - Hidden honeypot input on step 3.

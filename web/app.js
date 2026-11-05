@@ -7,7 +7,7 @@
     API_URL: 'https://script.google.com/macros/s/AKfycbx6IzIM80uFVI_BOEOsq09xjYxFARJAM1SCMC4KeM_Jhx2OrWGX0_FhOQY1UeRMtJCZ_g/exec',
     // Shown if the order system cannot be reached (the sheet's values are used once loaded).
     SHOP_PHONE: '',
-    CONTACT_EMAIL: '', // TBD: address customers can email with questions
+    CONTACT_EMAIL: '', // optional; left blank on purpose for now
     REQUEST_TIMEOUT_MS: 20000
   };
 
